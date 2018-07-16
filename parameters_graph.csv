@@ -1,0 +1,43 @@
+name,value,
+scenario,5,			# selection of the scenario setup
+nSteps,400,             	# number of simulation steps
+burnIn,100,            		# number of burn in time steps
+omniscientBurnIn,25,   		# number of omiscient agent time steps 
+connRadius,2.1,        		# radius within which location cell get connected
+minFriends,30,         		# min number of friends per person
+maxFriends,100,        		# max number of friends per person
+memoryTime,15,          	# number of time steps for which observations remain saved
+utilObsError,15,         	# observation error to compare utilities
+mobNewPeriod,36,        	# period within a choice is new and not challenged
+randomCarPropDeviationSTD,0.01, # individual random deviation of car properities
+urbanThreshold,100,    		# population density threshold that seperates urban and rural
+urbanCritical,200,    		# population density for minimal convenience [?] 
+convA,0.8,            		# max convenience [.7 1]
+convC,0.3,            		# max convenience of other [0 1]
+convD,0.06,           		# rate how fast convenience changes with population density [0.01 0.1]
+kappa,-0.15,           		# initial disadvantage of green infrastructure [-0.5 -0.05]
+innoPriority,0.23,     		# weight of priority of innovation [0 0.5]
+mobIncomeShare, 0.2,  		# [0.1 0.4]
+individualPrio, 0.15,  		# individual random component of priorities
+charIncome,5000,       		# [100 5000]
+minIncomeEco, 2500,    		# [1000 5000]
+innoWeigPrice, 0.25,   		# innoWeigEmmisions = 1 - innoWeigPrice [0 1]
+innoDevRange, 5,       		# extend of the area within the innovation distribution  
+initialGreen, 2000000, 		# inertia of green technical change (for full population)
+initialBrown, 40000000,		# inertia of brown technical change (for full population)
+initialOther, 20000000,  	# inertia of other technical change (for full population)
+puplicTransBonus,5,
+charAge,10,            		# [0 10]
+radicality,3,          		# exponent of the preferences -> high values lead to extreme differences
+util,cobb,                      # [cobb, ces]
+mpi,0,
+reductionFactor,20,            # population reduction factor
+initPriceBrown,450.0,           # initial price of combution engine car
+initPriceGreen,1600.0,          # initial price of green engine car
+initPriceOther,200.0,           # initial price of other mobility
+
+
+
+
+
+

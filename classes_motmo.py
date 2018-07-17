@@ -1307,7 +1307,7 @@ class Person(Agent, Parallel):
 
 
         #get spatial weights to all connected cells
-        cellConnWeights, linkIds, cellIds = self.loc.getConnectedCells()
+        cellConnWeights, cellIds = self.loc.getConnectedCells()
         personIdsAll = list()
         nPers = list()
         cellWeigList = list()
@@ -1453,7 +1453,7 @@ class Person(Agent, Parallel):
 
     def imitate(self, utilPeers, weights, mobTypePeers):
         #pdb.set_trace()
-        if self['preferences'][INNO] > .15 and random.random() > .98:
+        if self.attr['preferences'][0,INNO] > .15 and random.random() > .98:
             self.imitation = [np.random.choice(self['commUtil'].shape[0])]
         else:
 
@@ -1491,7 +1491,7 @@ class Person(Agent, Parallel):
         mobTypePeers    = Person.cacheMobType[:nPeers]
         mobTypePeers[:] = self.getAttrOfPeers('mobType', CON_PP)
         weights         = Person.cacheWeights[:nPeers]
-        weights[:], _, friendIDs= self.getAttrOfLink('weig', CON_PP)
+        weights[:]      = self.getAttrOfLink('weig', CON_PP)
 
         
         
@@ -1518,7 +1518,7 @@ class Person(Agent, Parallel):
 
         if self['mobType']>1:
             good = earth.market.goods[self['mobType']]
-            self['prop'] =[good.properties['emissions'],good.properties['fixedCosts'], good.properties['operatingCosts']]
+            self.attr['prop'] =[good.properties['emissions'],good.properties['fixedCosts'], good.properties['operatingCosts']]
 
         # socialize
 #        if np.random.rand() >0.99:
@@ -1655,7 +1655,7 @@ class Household(Agent, Parallel):
 
             hhUtility += utility
 
-        self['util'] =  hhUtility
+        self.attr['util'] =  hhUtility
 
         return hhUtility
 
@@ -1740,7 +1740,7 @@ class Household(Agent, Parallel):
                 personalCosts += float(nTrips) * avgKm * properties[OPERATINGCOSTS] 
             person['costs'] = personalCosts
             # add cost of mobility to the expenses
-            self['expenses'] += personalCosts
+            self.attr['expenses'] += personalCosts
 
 
     def undoActions(self, world, persons):
@@ -1752,7 +1752,7 @@ class Household(Agent, Parallel):
             self.loc.remFromTraffic(mobType)
 
             # remove cost of mobility to the expenses
-            self['expenses'] -= adult['costs']
+            self.attr['expenses'] -= adult['costs']
 
             world.market.sellCar(mobType)
 
@@ -1897,7 +1897,7 @@ class Household(Agent, Parallel):
                             adult['lastAction'] = 0
                     operatingCosts = averDist*mobilityProperties[OPERATINGCOSTS]
                     fixedCosts     = mobilityProperties[FIXEDCOSTS]
-                    self['expenses'] +=  operatingCosts + fixedCosts #TODO running costs
+                    self.attr['expenses'] +=  operatingCosts + fixedCosts #TODO running costs
 
                 self.calculateConsequences(market)
                 utility = self.evalUtility(earth)
@@ -2192,8 +2192,11 @@ class Cell(Location, Parallel):
         """ 
         ToDo: check if not deprecated 
         """
-        self.weights, linkReferences, connectedNodes = self.getAttrOfLink('weig',liTypeID=CON_LL)
-        return self.weights, linkReferences, connectedNodes
+        
+        connectedNodes =  self.getPeerIDs(liTypeID=CON_LL)
+        
+        self.weights = self.getAttrOfLink('weig',liTypeID=CON_LL)
+        return self.weights, connectedNodes
 
 
 
@@ -2276,7 +2279,7 @@ class Cell(Location, Parallel):
         if sum(nStation) == 0:
             return 0.
         
-        weights, _, _ = self.getAttrOfLink('weig',CON_LL)
+        weights, _ = self.getAttrOfLink('weig',CON_LL)
         
         if greenMeanCars is None:
             

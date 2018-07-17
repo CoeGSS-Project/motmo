@@ -658,12 +658,12 @@ def initSpatialLayer(earth):
     if 'regionIdRaster' in list(parameters.keys()):
 
         for cell in earth.random.shuffleAgentsOfType(CELL):
-            cell['regionId'] = parameters['regionIdRaster'][tuple(cell['pos'])]
-            cell['chargStat'] = 0
-            cell['emissions'] = np.zeros(len(earth.getEnums()['mobilityTypes']))
-            cell['electricConsumption'] = 0.
+            cell.attr['regionId'] = parameters['regionIdRaster'][tuple(cell['pos'])]
+            cell.attr['chargStat'] = 0
+            cell.attr['emissions'] = np.zeros(len(earth.getEnums()['mobilityTypes']))
+            cell.attr['electricConsumption'] = 0.
             cell.cellSize = parameters['cellSizeMap'][tuple(cell['pos'])]
-            cell['popDensity'] = popDensity[tuple(cell['pos'])]
+            cell.attr['popDensity'] = popDensity[tuple(cell['pos'])]
     if earth.isParallel:        
         earth.papi.updateGhostAgents([CELL],['chargStat'])
 
@@ -915,7 +915,7 @@ def runModel(earth, parameters):
 
         household.takeActions(earth, household.adults, np.random.randint(0, earth.market.getNMobTypes(), len(household.adults)))
         for adult in household.adults:
-            adult['lastAction'] =  np.int(np.random.rand() * np.float(earth.para['mobNewPeriod']))
+            adult.attr['lastAction'] =  np.int(np.random.rand() * np.float(earth.para['mobNewPeriod']))
 
     lg.info('Initial actions done')
 

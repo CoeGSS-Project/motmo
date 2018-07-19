@@ -1,8 +1,8 @@
-regionIds = [ 6321 ]
+regionIds = [1518, 1520, 6321]
 
 years = range(2012, 2018) #2018 is not included
 
-scenarioFileName = 'parameters_med.csv'
+scenarioFileName = 'parameters_NBH.csv'
 
 resultScript = './response-scripts/multi-objective-intervals.py'
 
@@ -27,4 +27,3 @@ def calcWeight(var, region, year):
     if var == 'o_inIntervalElec' or var == 'o_inIntervalComb':
         return 1
     return 0
-

@@ -7,7 +7,7 @@ years = range(2012, 2018) #2018 is not included
 
 scenarioFileName = 'parameters_ger.csv'
 
-resultScript = 'multi-objective-intervals.py'
+resultScript = './response-scripts/multi-objective-intervals.py'
 
 outputValues = ['o_numCombCars', 'o_numElecCars']
 
@@ -17,4 +17,6 @@ continuousVariables = [
 ]
 
 def calcWeight(var, region, year):
-    return 1
+    if var == 'o_inIntervalElec' or var == 'o_inIntervalComb':
+        return 1
+    return 0

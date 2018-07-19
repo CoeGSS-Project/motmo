@@ -114,7 +114,7 @@ createCalibrationTable <- function(df, ts) { ##//{
 
 #####------ script style starts here
 
-df <- readTable('dakota.csv')
+df <- readTable('../dakota.csv')
 
 ## df %<>% mutate_at(vars(contains("dataElec")), funs(. * 3) )
 ## df %<>% mutate_at(vars(contains("dataComb")), funs(. * 0.1) )

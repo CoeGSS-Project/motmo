@@ -1208,7 +1208,7 @@ class Person(Agent, Parallel):
     
     def weightFriendExperience(self, world, commUtilPeers, weights):        
         friendUtil = commUtilPeers[:,self['mobType']]
-        ownUtil    = self.attr['util'][0]
+        ownUtil    = self.attr['util']
 
         prop = normalizedGaussian(friendUtil, ownUtil, world.para['utilObsError'])
         prior = normalize(weights)
@@ -1237,19 +1237,19 @@ class Person(Agent, Parallel):
             #return weights, self.attr['ESSR']
 
 
-    def socialize(self, weights, friendIDs):
+    def socialize(self, weights):
 
 #        weights, linksRef, friendIDs = self.getAttrOfLink('weig', liTypeID=CON_PP)
         nContacts = len(weights)
         nDrops    = int(nContacts/5)
-        
+        friendIDs = self.getPeerIDs(CON_PP)
         if np.sum(weights < 0.001) > nDrops:
             dropIds = np.asarray(friendIDs)[np.argsort(weights)[:nDrops].tolist()].tolist()
         else:
              dropIds = np.asarray(friendIDs)[weights < 0.001]
         nDrops =  len(dropIds)
         if nDrops > 0:
-            self.remLinks(friendIDs=dropIds, liTypeID=CON_PP)
+            self.remLinks(dropIds, CON_PP)
         
         # add t new connections
         currContacts = self.getPeerIDs(CON_PP)
@@ -1266,9 +1266,10 @@ class Person(Agent, Parallel):
 
     def getRandomNewContacts(self, nContacts, currentContacts):
         
-        cellConnWeights, linkIds, cellIds = self.loc.getConnectedCells()
-        cell = self.getPeer(np.random.choice(cellIds))
-        personIds = cell.getPersons()
+        cellConnWeights, cellIds = self.loc.getConnectedCells()
+        #cell = self.getPeer(np.random.choice(cellIds))
+        #personIds = cell.getPersons()
+        personIds = self._graph.outgoingIDs(self.nID, CON_LH)
 
         if len(personIds) > nContacts:
             contactIds = np.random.choice(personIds, size= nContacts, replace=False)
@@ -1307,6 +1308,7 @@ class Person(Agent, Parallel):
 
 
         #get spatial weights to all connected cells
+
         cellConnWeights, cellIds = self.loc.getConnectedCells()
         personIdsAll = list()
         nPers = list()
@@ -1418,8 +1420,8 @@ class Person(Agent, Parallel):
     def computeCommunityUtility(self,earth, weights, commUtilPeers):
         #get weights from friends
         #weights, links = self.getAttrOfLink('weig', liTypeID=CON_PP)
-        commUtil = self.attr['commUtil'][0] # old value
-        selfUtil = self.attr['selfUtil'][0]
+        commUtil = self.attr['commUtil'] # old value
+        selfUtil = self.attr['selfUtil']
         # compute weighted mean of all friends
         if earth.para['weightConnections']:
             commUtil += np.dot(weights, commUtilPeers)
@@ -1453,7 +1455,7 @@ class Person(Agent, Parallel):
 
     def imitate(self, utilPeers, weights, mobTypePeers):
         #pdb.set_trace()
-        if self.attr['preferences'][0,INNO] > .15 and random.random() > .98:
+        if self.attr['preferences'][INNO] > .15 and random.random() > .98:
             self.imitation = [np.random.choice(self['commUtil'].shape[0])]
         else:
 
@@ -1522,7 +1524,7 @@ class Person(Agent, Parallel):
 
         # socialize
 #        if np.random.rand() >0.99:
-#            self.socialize(weights, friendIDs)
+#            self.socialize(weights)
 
 
 
@@ -1651,7 +1653,7 @@ class Household(Agent, Parallel):
 
             if actionTaken:
                 # self-util is only saved if an action is taken
-                adult.attr['selfUtil'][0, adult['mobType']] = utility
+                adult.attr['selfUtil'][adult['mobType']] = utility
 
             hhUtility += utility
 
@@ -1670,10 +1672,10 @@ class Household(Agent, Parallel):
                 adult.computeCommunityUtility(earth)
                 actionIds = [-1] + list(range(earth.para['nMobTypes']))
 
-                eUtils = [adult.attr['util'][0]] + adult.attr['commUtil'][0]
+                eUtils = [adult.attr['util'] + adult.attr['commUtil']]
 
             else:
-                actionIds, eUtils = [-1], [adult.attr['util'][0]]
+                actionIds, eUtils = [-1], [adult.attr['util']]
 
             actionIdsList.append(actionIds)
             eUtilsList.append(eUtils)
@@ -1691,7 +1693,7 @@ class Household(Agent, Parallel):
             while len([x for x in actionIdsList if x == [-1]]) < minNoAction:
                 randIdx = np.random.randint(len(actionIdsList))
                 actionIdsList[randIdx] = [-1]
-                eUtilsList[randIdx] =  [adult['util']]#[ eUtilsList[randIdx][0] ]
+                eUtilsList[randIdx] =  [adult['util']]#[ eUtilsList[randIdx] ]
             #print 'large Household'
 
         combActions = core.cartesian(actionIdsList)
@@ -1714,13 +1716,13 @@ class Household(Agent, Parallel):
             self.loc.addToTraffic(actionIdx)
             
             
-            person.set('mobType', int(actionIdx))
+            person.attr['mobType'] = int(actionIdx)
 
-            person.set('prop', properties)
+            person.attr['prop'] = properties
             if earth.time <  earth.para['omniscientBurnIn']:
-                person.set('lastAction', random.randint(0, int(1.5*earth.para['mobNewPeriod'])))
+                person.attr['lastAction'] =  random.randint(0, int(1.5*earth.para['mobNewPeriod']))
             else:
-                person.set('lastAction', 0)
+                person.attr['lastAction'] = 0
 
             nJourneys = person['nJourneys'].tolist()
             emissionsPerKm = properties[EMISSIONS] * earth.market.para['reductionFactor']# in kg/km
@@ -1881,20 +1883,20 @@ class Household(Agent, Parallel):
                     
                     mobChoice = combinedActions[combinationIdx][adultIdx]
                     if mobChoice == -1:     # no action taken
-                        adult['mobType'] = oldMobType[adultIdx]
-                        adult['prop'] = oldProp[adultIdx]
-                        adult['lastAction'] = oldLastAction[adultIdx]
+                        adult.attr['mobType'] = oldMobType[adultIdx]
+                        adult.attr['prop'] = oldProp[adultIdx]
+                        adult.attr['lastAction'] = oldLastAction[adultIdx]
                         mobilityProperties = oldProp[adultIdx]
                         #print(mobilityProperties)
                     else:
-                        adult['mobType'] = mobChoice
+                        adult.attr['mobType'] = mobChoice
                         mobilityProperties = market.goods[adult['mobType']].getProperties()
                         
-                        adult['prop'] = mobilityProperties
+                        adult.attr['prop'] = mobilityProperties
                         if earth.time <  earth.para['burnIn']:
-                            adult['lastAction'] = random.randint(0, int(1.5* earth.para['mobNewPeriod']))
+                            adult.attr['lastAction'] = random.randint(0, int(1.5* earth.para['mobNewPeriod']))
                         else:
-                            adult['lastAction'] = 0
+                            adult.attr['lastAction'] = 0
                     operatingCosts = averDist*mobilityProperties[OPERATINGCOSTS]
                     fixedCosts     = mobilityProperties[FIXEDCOSTS]
                     self.attr['expenses'] +=  operatingCosts + fixedCosts #TODO running costs
@@ -1905,10 +1907,10 @@ class Household(Agent, Parallel):
 
             # reset old node values
             for adultIdx, adult in enumerate(self.adults):
-                adult.set('mobType', oldMobType[adultIdx])
-                adult.set('prop', oldProp[adultIdx])
-                adult.set('lastAction', oldLastAction[adultIdx])
-            self.set('expenses', oldExpenses)
+                adult.attr['mobType'] = oldMobType[adultIdx]
+                adult.attr['prop'] = oldProp[adultIdx]
+                adult.attr['lastAction'] = oldLastAction[adultIdx]
+            self.attr['expenses'] = oldExpenses
 
             # get best combination
             bestUtilIdx = np.argmax(utilities)
@@ -2192,7 +2194,7 @@ class Cell(Location, Parallel):
         """ 
         ToDo: check if not deprecated 
         """
-        
+
         connectedNodes =  self.getPeerIDs(liTypeID=CON_LL)
         
         self.weights = self.getAttrOfLink('weig',liTypeID=CON_LL)
@@ -2214,11 +2216,11 @@ class Cell(Location, Parallel):
         """
         
         """
-        self.attr['carsInCell'][:,int(mobTypeID)] += 1
+        self.attr['carsInCell'][mobTypeID] += 1
 
 
     def remFromTraffic(self,mobTypeID):
-        self.attr['carsInCell'][0,int(mobTypeID)] -= 1
+        self.attr['carsInCell'][mobTypeID] -= 1
 
 
 
@@ -2279,7 +2281,7 @@ class Cell(Location, Parallel):
         if sum(nStation) == 0:
             return 0.
         
-        weights, _ = self.getAttrOfLink('weig',CON_LL)
+        weights = self.getAttrOfLink('weig',CON_LL)
         
         if greenMeanCars is None:
             
@@ -2329,9 +2331,9 @@ class Cell(Location, Parallel):
                 # elecric car is used -> compute estimate of power consumption
                 # for the current model 0.6 kg / kWh
                 electricConsumption = emissionsPers[idx].sum() / 0.6
-                self.set('electricConsumption', electricConsumption)
+                self.attr['electricConsumption'] =  electricConsumption
         
-        self.set('emissions', emissionsCell) 
+        self.attr['emissions'] =  emissionsCell
         
     def step(self, parameters, currentMaturity):
         """

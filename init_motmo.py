@@ -569,7 +569,7 @@ def initScenario(earth, parameters):
 def initTypes(earth):
     tt = time.time()
     global CELL
-    CELL = earth.registerAgentType('cell', AgentClass=Cell, GhostAgentClass= GhostCell,
+    CELL = earth.registerAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
                                staticProperties  = [('gID', np.int32, 1),
                                                    ('pos', np.int16, 2),
                                                    ('regionId', np.int16, 1),
@@ -582,8 +582,7 @@ def initTypes(earth):
                                                    ('electricConsumption', np.float64, 1)])
 
     global HH
-    HH = earth.registerAgentType('hh', 
-                                AgentClass=Household, 
+    HH = earth.registerAgentType(AgentClass=Household, 
                                 GhostAgentClass=GhostHousehold,
                                 staticProperties  = [('gID', np.int32, 1),
                                                     ('pos', np.int16, 2),
@@ -596,7 +595,7 @@ def initTypes(earth):
                                                     ('expenses', np.float64, 1)])
 
     global PERS
-    PERS = earth.registerAgentType('pers', AgentClass=Person, GhostAgentClass= GhostPerson,
+    PERS = earth.registerAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
                                 staticProperties = [('gID', np.int32, 1),
                                                    ('hhID', np.int32, 1),
                                                    ('preferences', np.float64, 4),
@@ -633,7 +632,7 @@ def initTypes(earth):
 def initSpatialLayer(earth):
     tt = time.time()
     parameters = earth.getParameters()
-    connList= core.computeConnectionList(parameters['connRadius'], ownWeight=1.5)
+    connList= earth.spatial.computeConnectionList(parameters['connRadius'], ownWeight=1.5)
     earth.spatial.initSpatialLayer(parameters['landLayer'],
                            connList, 
                            LocClassObject=Cell,
@@ -772,8 +771,8 @@ def initGlobalRecords(earth):
     tt = time.time()
     parameters = earth.getParameters()
 
-    calDataDfCV = pd.read_csv(parameters['resourcePath'] + 'calDataCV.csv', index_col=0, header=1)
-    calDataDfEV = pd.read_csv(parameters['resourcePath'] + 'calDataEV.csv', index_col=0, header=1)
+    calDataDfCV = pd.read_csv(parameters['resourcePath'] + 'calDataCV.csv', index_col=0, header=0)
+    calDataDfEV = pd.read_csv(parameters['resourcePath'] + 'calDataEV.csv', index_col=0, header=0)
 
 
     enums = earth.getEnums()
@@ -783,7 +782,7 @@ def initGlobalRecords(earth):
                          list(enums['mobilityTypes'].values()),
                          style='plot',
                          mpiReduce='sum')
-    
+        
         earth.registerRecord('elDemand_' + str(re),
                          'electric Demand -' + str(re),
                          ['electric_demand'],

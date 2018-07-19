@@ -1,7 +1,6 @@
 ##  dakota_restart_util to_tabular dakota.rst dakota.tabular
 ##  sed -r 's/[ ]+/,/g' ../dakota.tabular > dakota.csv
 
-
 ## devtools::install_github("rstudio/crosstalk")
 ## devtools::install_github("ropensci/plotly")
 ## devtools::install_github("rstudio/DT")
@@ -20,7 +19,7 @@ options(tibble.width = 120)
 options(shiny.autoreload = TRUE)
 
 readTable <- function(filename) { ##//{
-    df <- read_table2(filename) %>%
+    df <- read_csv(filename) %>%
         select(-interface, -scenarioFileName, -calcResultsScript)
     names(df)[1] <- 'id'
     ## the last column is an artifact from the dakota_restart_util and can be removed
@@ -38,27 +37,27 @@ findVars <- function(df) {
 } #//}
 
 ##//{ Methods for extracting information from the Response descriptors
-  ## In the responce description, a lot of information is encoded, 
-  ## namely the variable name, the regiond and the year.
-  ## As the description strings starts with "o_", this information
-  ## is in the second, third and forth position after a split.
-  VARIABLEPOS = 2
-  REGIONPOS = 3
-  YEARPOS = 4
+## In the responce description, a lot of information is encoded, 
+## namely the variable name, the regiond and the year.
+## As the description strings starts with "o_", this information
+## is in the second, third and forth position after a split.
+VARIABLEPOS = 2
+REGIONPOS = 3
+YEARPOS = 4
 
-  findResponses <- function(df) {
+findResponses <- function(df) {
     df %>% names(.) %>% Filter(function(s) { startsWith(s, 'o_') }, .)
-  }
+}
 
-  extractFromColumnName <- function(cn, pos) {
+extractFromColumnName <- function(cn, pos) {
     cn %>% Map( function(s) { strsplit(s, '_')[[1]][pos] }, . )
-  }
+}
 
-  findResponsePart <- function(df, pos) {
+findResponsePart <- function(df, pos) {
     findResponses(df) %>%
-    extractFromColumnName(pos) %>%
-    unique
-  } #//}
+        extractFromColumnName(pos) %>%
+        unique
+} #//}
 
 createTimeSeriesTable <- function(df) { ##//{
     df %>%
@@ -115,33 +114,33 @@ createCalibrationTable <- function(df, ts) { ##//{
 
 #####------ script style starts here
 
-df <- readTable('../dakota-moga.tabular')
+df <- readTable('dakota.csv')
 
-df %<>% mutate_at(vars(contains("dataElec")), funs(. * 3) )
-df %<>% mutate_at(vars(contains("dataComb")), funs(. * 0.1) )
-names
-df %<>% mutate(opt = "moga")
+## df %<>% mutate_at(vars(contains("dataElec")), funs(. * 3) )
+## df %<>% mutate_at(vars(contains("dataComb")), funs(. * 0.1) )
+
+## df %<>% mutate(opt = "moga")
 
 ts <- createTimeSeriesTable(df)
 
 ct <- createCalibrationTable(df, ts)
 
 
-df2 <- readTable('../dakota.tabular')
+## df2 <- readTable('../dakota.tabular')
 
-df2 %<>% mutate_at(vars(contains("dataElec")), funs(. * 3) )
-df2 %<>% mutate_at(vars(contains("dataComb")), funs(. * 0.1) )
-df2 %<>% mutate(id = id + 10000)
+## df2 %<>% mutate_at(vars(contains("dataElec")), funs(. * 3) )
+## df2 %<>% mutate_at(vars(contains("dataComb")), funs(. * 0.1) )
+## df2 %<>% mutate(id = id + 10000)
 
-df2 %<>% mutate(opt = "direct", runNo = 0)
-
-
-ts2 <- createTimeSeriesTable(df2)
-
-ct2 <- createCalibrationTable(df2, ts2)
+## df2 %<>% mutate(opt = "direct", runNo = 0)
 
 
-ct %<>% bind_rows(ct2)
+## ts2 <- createTimeSeriesTable(df2)
+
+## ct2 <- createCalibrationTable(df2, ts2)
+
+
+## ct %<>% bind_rows(ct2)
 ## ctl <- ct %>% select(id, starts_with("c_")) %>% gather(key = 'var', value = 'value', -id)
 
 

@@ -49,4 +49,8 @@ with io.open(sys.argv[1], mode = 'r') as template:
             line = line.replace('%CONTINUOUS_INITIALPOINT%', continuousInitialPoint)
             line = line.replace('%CONTINUOUS_LOWERBOUNDS%', continuousLowerBounds)
             line = line.replace('%CONTINUOUS_UPPERBOUNDS%', continuousUpperBounds)
+            line = line.replace('%NUM_UNIFORM%', str(len(continuousVariables)))
+            line = line.replace('%UNIFORM_DESCRIPTORS%', continuousDescriptors)
+            line = line.replace('%UNIFORM_LOWERBOUNDS%', continuousLowerBounds)
+            line = line.replace('%UNIFORM_UPPERBOUNDS%', continuousUpperBounds)
             out.write(line)

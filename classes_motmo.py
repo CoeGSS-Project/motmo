@@ -25,10 +25,10 @@ You should have received a copy of the GNU General Public License
 along with GCFABM.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from lib import core
+from gcfabm import core
 
-from lib import World, Agent, GhostAgent, Location, GhostLocation
-from lib.traits import Parallel
+from gcfabm import World, Agent, GhostAgent, Location, GhostLocation
+from gcfabm.traits import Parallel
 
 #import pdb
 #import igraph as ig
@@ -137,7 +137,6 @@ class Earth(World):
         World.__init__(self,
                        simNo,
                        outPath,
-                       parameters.isSpatial,
                        nSteps,
                        maxNodes=maxNodes,
                        maxLinks=maxLinks,
@@ -1385,7 +1384,7 @@ class Person(Agent, Parallel):
         weightData[:,0] = weightData[:,0] / np.sum(weightData[:,0],axis=0)
 
         if np.sum(weightData[:,0]>0) < nContacts:
-            lg.info( "nID: " + str(self.nID) + ": Reducting the number of friends at " + str(self.loc['pos']))
+            lg.info( "nID: " + str(self.nID) + ": Reducting the number of friends at " + str(self.loc['coord']))
             lg.info( "population = " + str(self.loc['population']) + " surrounding population: " +str(np.sum(self.loc.getAttrOfPeers('population',CON_LL)[0])))
 
             nContacts = min(np.sum(weightData[:,0]>0)-1,nContacts)

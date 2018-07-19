@@ -13,7 +13,7 @@ dirPath = os.path.dirname(os.path.realpath(__file__))
 os.chdir('..')
 
 import init_motmo as init
-from lib import core
+from gcfabm import core
 
 comm    = core.comm
 mpiRank = core.mpiRank

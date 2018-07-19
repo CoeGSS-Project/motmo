@@ -31,7 +31,7 @@ from scipy import signal
 
 
 import init_motmo as init
-from lib import core
+from gcfabm import core
 
 mpiSize = core.mpiSize
 def convolutionMatrix(radius, centerWeight):
@@ -222,7 +222,7 @@ def scenarioTestMedium(parameterInput, dirPath):
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 0
+    setup.writeAgentFile = 1
     setup.writeNPY = 1
     setup.writeCSV = 0
 

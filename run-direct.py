@@ -30,7 +30,7 @@ import os
 import socket
 
 import init_motmo as init
-from lib import core
+from gcfabm import core
 
 
 debug = True
@@ -63,7 +63,7 @@ parameters['showFigures'] = showFigures
 earth = init.initEarth(simNo,
                        outputPath,
                        parameters,
-                       maxNodes=1000000,
+                       maxNodes=100000,
                        maxLinks=5000000,
                        debug=debug,
                        mpiComm=comm)

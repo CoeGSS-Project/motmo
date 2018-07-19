@@ -41,7 +41,7 @@ from scipy import signal
 
 sys.path.append('../gcfabm')
 from classes_motmo import Person, GhostPerson, Household, GhostHousehold, Cell, GhostCell, Earth, Opinion
-from lib import core
+from gcfabm import core
 import scenarios
 
 print('import done')
@@ -104,7 +104,7 @@ def mobilitySetup(earth):
     def conveniencePublicLeuphana(density, pa, kappa, cell):
         
         currKappa   = (1 - kappa) * pa['maxConvGInit'] + kappa * pa['maxConvG']
-        return pa['conveniencePublic'][cell._node['pos']] * currKappa
+        return pa['conveniencePublic'][cell._node['coord']] * currKappa
 
 
     def conveniencePublic(density, pa, kappa, cell):
@@ -353,7 +353,7 @@ def householdSetup(earth, calibration=False):
     for x, y in list(locDict.keys()):
         #print x,y
         nAgentsCell = int(parameters['population'][x, y]) + nAgentsCell # subtracting Agents that are places too much in the last cell
-        loc         = earth.spatial.getLocation(x, y)
+        loc         = earth.grid.getLocation(x, y)
         region      = parameters['regionIdRaster'][x, y]
         regionIdx   = np.where(regionIdxList == region)[0][0]
 
@@ -391,7 +391,7 @@ def householdSetup(earth, calibration=False):
 
             # creating houshold
             hh = Household(earth,
-                           pos=(x, y),
+                           coord=(x, y),
                            hhSize=nPers,
                            nKids=nKids,
                            income=income,
@@ -571,7 +571,7 @@ def initTypes(earth):
     global CELL
     CELL = earth.registerAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
                                staticProperties  = [('gID', np.int32, 1),
-                                                   ('pos', np.int16, 2),
+                                                   ('coord', np.int16, 2),
                                                    ('regionId', np.int16, 1),
                                                    ('popDensity', np.float64, 1),
                                                    ('population', np.int16, 1)],
@@ -585,7 +585,7 @@ def initTypes(earth):
     HH = earth.registerAgentType(AgentClass=Household, 
                                 GhostAgentClass=GhostHousehold,
                                 staticProperties  = [('gID', np.int32, 1),
-                                                    ('pos', np.int16, 2),
+                                                    ('coord', np.int16, 2),
                                                     ('hhSize', np.int8,1),
                                                     ('nKids', np.int8, 1),
                                                     ('hhType', np.int8, 1)],
@@ -630,13 +630,13 @@ def initTypes(earth):
     return CELL, HH, PERS
 
 def initSpatialLayer(earth):
+    earth.registerGrid(CELL, CON_CC)
     tt = time.time()
     parameters = earth.getParameters()
-    connList= earth.spatial.computeConnectionList(parameters['connRadius'], ownWeight=1.5)
-    earth.spatial.initSpatialLayer(parameters['landLayer'],
+    connList= earth.grid.computeConnectionList(parameters['connRadius'], ownWeight=1.5)
+    earth.grid.init(parameters['landLayer'],
                            connList, 
-                           LocClassObject=Cell,
-                           liTypeID=CON_CC)
+                           LocClassObject=Cell)
     
     convMat = np.asarray([[0., 1, 0.],[1., 1., 1.],[0., 1., 0.]])
     tmp = parameters['population']*parameters['reductionFactor']
@@ -657,12 +657,12 @@ def initSpatialLayer(earth):
     if 'regionIdRaster' in list(parameters.keys()):
 
         for cell in earth.random.shuffleAgentsOfType(CELL):
-            cell.attr['regionId'] = parameters['regionIdRaster'][tuple(cell['pos'])]
+            cell.attr['regionId'] = parameters['regionIdRaster'][tuple(cell['coord'])]
             cell.attr['chargStat'] = 0
             cell.attr['emissions'] = np.zeros(len(earth.getEnums()['mobilityTypes']))
             cell.attr['electricConsumption'] = 0.
-            cell.cellSize = parameters['cellSizeMap'][tuple(cell['pos'])]
-            cell.attr['popDensity'] = popDensity[tuple(cell['pos'])]
+            cell.cellSize = parameters['cellSizeMap'][tuple(cell['coord'])]
+            cell.attr['popDensity'] = popDensity[tuple(cell['coord'])]
     if earth.isParallel:        
         earth.papi.updateGhostAgents([CELL],['chargStat'])
 
@@ -698,7 +698,7 @@ def cellTest(earth):
             convAll[1] = convAll[1] * cell.electricInfrastructure(100.)
             convArray[:, i] = convAll
             popArray[i] = popDensity
-            eConvArray[cell['pos']] = convAll[1]
+            eConvArray[cell['coord']] = convAll[1]
             #print time.time() - ttclass
         
         

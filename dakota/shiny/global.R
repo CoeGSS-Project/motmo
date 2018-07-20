@@ -87,7 +87,7 @@ calcInterval <- function(ts, data, response, lowerFactor, upperFactor) { ##//{
     vecSize - inInterval$inInterval
 } ##//}
 
-calcAbsError <- function(ts, data, response, region) { ##//{
+calcAbsError <- function(ts, data, response) { ##//{
     sim <- ts %>% filter(responseDesc == data) %>% select(id, sim = value)
     real <- ts %>% filter(responseDesc == response) %>% select(id, real = value)
     both <- real %>% add_column(sim = sim$sim)
@@ -97,8 +97,8 @@ calcAbsError <- function(ts, data, response, region) { ##//{
 createCalibrationTable <- function(df, ts) { ##//{
     ## the 'real world' numbers are the same for each run, so I just take the one with the minimal id
     firstRun <- min(ts$id)
-    numDataElecCars <- sum((ts %>% filter(id == firstRun, responseDesc == 'dataElecCars', region == '6321'))$value)
-    numDataCombCars <- sum((ts %>% filter(id == firstRun, responseDesc == 'dataCombCars', region == '6321'))$value)
+    numDataElecCars <- sum((ts %>% filter(id == firstRun, responseDesc == 'dataElecCars'))$value)
+    numDataCombCars <- sum((ts %>% filter(id == firstRun, responseDesc == 'dataCombCars'))$value)
 
     df %>%
         select(which(!startsWith(names(df), "o_"))) %>%
@@ -106,8 +106,8 @@ createCalibrationTable <- function(df, ts) { ##//{
         mutate(c_intervalElec = calcInterval(ts, 'dataElecCars', 'numElecCars', 0.8, 1.2),
                c_intervalComb = calcInterval(ts, 'dataCombCars', 'numCombCars', 0.8, 1.2)) %>%
         mutate(c_intervalSum = c_intervalElec + c_intervalComb) %>%
-        mutate(c_absErrorElec = calcAbsError(ts, 'dataElecCars', 'numElecCars', '6321'),
-               c_absErrorComb = calcAbsError(ts, 'dataCombCars', 'numCombCars', '6321')) %>%
+        mutate(c_absErrorElec = calcAbsError(ts, 'dataElecCars', 'numElecCars'),
+               c_absErrorComb = calcAbsError(ts, 'dataCombCars', 'numCombCars')) %>%
         mutate(c_absErrorSum = c_absErrorElec + c_absErrorComb,
                c_absErrorSumWeighted = c_absErrorElec / numDataElecCars + c_absErrorComb / numDataCombCars)
 } ##//}
@@ -125,6 +125,7 @@ ts <- createTimeSeriesTable(df)
 
 ct <- createCalibrationTable(df, ts)
 
+regions <- unique(ts$region)
 
 ## df2 <- readTable('../dakota.tabular')
 

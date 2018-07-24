@@ -241,7 +241,7 @@ def createAndReadParameters(fileName, dirPath):
         parameters = scenarios.create(parameters, dirPath)
 
         parameters = initExogeneousExperience(parameters)
-        parameters = randomizeParameters(parameters)
+        #parameters = randomizeParameters(parameters)
     else:
         parameters = None
     return parameters
@@ -279,7 +279,10 @@ def householdSetup(earth, calibration=False):
 
     nRegions = np.sum(tmp>0)
    
-    boolMask = parameters['landLayer']== core.mpiRank
+    if earth.isParallel:
+        boolMask = parameters['mpiRankLayer']== core.mpiRank
+    else:
+        boolMask = parameters['landLayer'].astype(np.bool)
     nAgentsOnProcess = np.zeros(nRegions)
     for i, region in enumerate(regionIdxList):
         boolMask2 = parameters['regionIdRaster']== region
@@ -351,7 +354,7 @@ def householdSetup(earth, calibration=False):
     
     
     for x, y in list(locDict.keys()):
-        #print x,y
+        
         nAgentsCell = int(parameters['population'][x, y]) + nAgentsCell # subtracting Agents that are places too much in the last cell
         loc         = earth.grid.getLocation(x, y)
         region      = parameters['regionIdRaster'][x, y]
@@ -390,6 +393,7 @@ def householdSetup(earth, calibration=False):
 
 
             # creating houshold
+            
             hh = Household(earth,
                            coord=(x, y),
                            hhSize=nPers,
@@ -402,7 +406,7 @@ def householdSetup(earth, calibration=False):
 
             hh.adults = list()
             hh.register(earth, parentEntity=loc, liTypeID=CON_LH)
-            #hh.registerAtLocation(earth,x,y,HH,CON_LH)
+            
 
             hh.loc['population'] = hh.loc['population'] + nPers
             if earth.isParallel:
@@ -634,10 +638,17 @@ def initSpatialLayer(earth):
     tt = time.time()
     parameters = earth.getParameters()
     connList= earth.grid.computeConnectionList(parameters['connRadius'], ownWeight=1.5)
-    earth.grid.init(parameters['landLayer'],
-                           connList, 
-                           LocClassObject=Cell)
-    
+    #print(parameters['landLayer'])
+    #print(parameters['mpiRankLayer'])
+    if earth.isParallel:
+        earth.grid.init((parameters['landLayer']),
+                               connList, 
+                               LocClassObject=Cell,
+                               mpiRankArray=parameters['mpiRankLayer'])
+    else:
+        earth.grid.init((parameters['landLayer']),
+                               connList, 
+                               LocClassObject=Cell)
     convMat = np.asarray([[0., 1, 0.],[1., 1., 1.],[0., 1., 0.]])
     tmp = parameters['population']*parameters['reductionFactor']
     tmp[np.isnan(tmp)] = 0
@@ -888,7 +899,7 @@ def randomizeParameters(parameters):
         parameters['maxFriends'] = maxFriendsRand
     minFriendsRand  = int( parameters['minFriends'] * randDeviation(5)) 
     if minFriendsRand < parameters['maxFriends']-1:
-        parameters['minFriends'] = minFriendsRand
+        parameters['minFriends'] = minFriendsRands
     parameters['mobIncomeShare'] * randDeviation(5)
     parameters['charIncome'] * randDeviation(5)
     parameters['priceRedBCorrection'] * randDeviation(3, -3, 3)
@@ -907,7 +918,8 @@ def runModel(earth, parameters):
         pprint.pprint(parameters.toDict(), fidPara)
         fidPara.close()
     lg.info('################################################################')
-
+    
+    
     #%% Initial actions
     tt = time.time()
     for household in earth.random.shuffleAgentsOfType(HH):

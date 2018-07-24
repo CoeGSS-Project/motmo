@@ -85,41 +85,39 @@ def scenarioTestSmall(parameterInput, dirPath):
     setup.timeUnit = init._month  # unit of time per step
     setup.startDate = [1, 2005]
 
-    a = 60000.
-    b = 45000.
-    c = 30000.
-    d = 25000.
-    e = 20000.
-    f = 15000.
-    g = 10000.
-    h = 5000.
-    i = 1500.
-
     # spatial
     setup.reductionFactor = 5000
     setup.isSpatial = True
     setup.spatialRedFactor = 280.
     setup.connRadius = 2.0     # radíus of cells that get an connection
-    setup.population = np.asarray([[c, a, b, 0, 0],
-                                   [c, b, d, 0, f],
-                                   [0, h, i, g, e]])
-    setup.landLayer = setup.population.copy().astype(float)
-    setup.landLayer[setup.landLayer == 0.] = np.nan
-    setup.landLayer = (setup.landLayer * 0.) + 1.
+    setup.landLayer = np.asarray([[1, 1, 1, 0, 0],
+                                   [1, 1, 1, 0, 1],
+                                   [0, 1, 1, 1, 1]])
+
     setup.cellSizeMap = setup.landLayer * 15.
-    setup.landLayer[0,:] = 0.
     setup.roadKmPerCell = np.asarray([[1, 5, 3, 0, 0],
                                       [1, 4, 4, 0, 1],
                                       [0, 1, 1, 1, 1]]) / setup.cellSizeMap
 
     setup.roadKmPerCell[np.isnan(setup.roadKmPerCell)] = 0.
-    setup.regionIdRaster = ((setup.landLayer * 0) + 1) * 6321
-    # setup.regionIdRaster[0:,0:2]    = ((setup.landLayer[0:,0:2]*0)+1) *1519
-    if mpiSize == 1:
-        setup.landLayer = setup.landLayer * 0
     
+    # setup.regionIdRaster[0:,0:2]    = ((setup.landLayer[0:,0:2]*0)+1) *1519
+    
+    popCountList= [60000, 45000, 30000, 25000, 20000, 15000, 10000, 5000, 1500]
+    
+    nCells = np.sum(setup.landLayer)
+    setup.population = np.zeros(setup.landLayer.shape)
+    setup.population[setup.landLayer==1] = np.random.choice(popCountList, nCells)
+    
+    setup.mpiRankLayer = setup.landLayer.astype(float).copy()
+    setup.mpiRankLayer[setup.landLayer == 0] = np.nan
+    
+    if mpiSize == 1:
+        setup.mpiRankLayer = setup.mpiRankLayer*0
+    else:
+        setup.mpiRankLayer[:, :2] = setup.mpiRankLayer[:, :2] * 0
         
-
+    setup.regionIdRaster = ((setup.mpiRankLayer*0)+1)*6321
     setup.regionIDList = np.unique(
         setup.regionIdRaster[~np.isnan(setup.regionIdRaster)]).astype(int)
 
@@ -169,24 +167,7 @@ def scenarioTestMedium(parameterInput, dirPath):
     # spatial
     setup.isSpatial = True
     setup.spatialRedFactor = 80.
-    setup.landLayer = np.asarray([[0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1 , 1, 1],
-                                  [0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1 , 1, 0],
-                                  [1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1 , 0, 0],
-                                  [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0 , 0, 0],
-                                  [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1 , 1, 1],
-                                  [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1 , 1, 1]])
-
-    setup.cellSizeMap = setup.landLayer * 15.
-
-    setup.roadKmPerCell = np.asarray([[0, 0, 0, 0, 0, 1, 2, 2, 1, 0, 1 , 1, 0],
-                                      [0, 1, 0, 0, 0, 0, 1, 2, 3, 1, 0 , 0, 0],
-                                      [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 , 0, 0],
-                                      [2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 , 0, 0],
-                                      [3, 4, 1, 1, 2, 1, 1, 0, 0, 0, 0 , 0, 1],
-                                      [6, 5, 2, 3, 2, 0, 1, 0, 0, 0, 0 , 1, 2]]) 
-    setup.roadKmPerCell[setup.roadKmPerCell==0] = 1
-    setup.roadKmPerCell = setup.landLayer / setup.roadKmPerCell 
-
+    
     a = 60000.
     b = 45000.
     c = 30000.
@@ -203,26 +184,50 @@ def scenarioTestMedium(parameterInput, dirPath):
                                    [a, b, c, c, d, e, f, 0, 0, 0, i, i, i],
                                    [a, a, c, c, d, f, f, 0, 0, 0, i, i, g]])
     del a, b, c, d, e, f, g, h, i
+    
+    
+    setup.landLayer =  (setup.population>0).astype(int)
+    
+    setup.cellSizeMap = setup.landLayer * 15.
 
-    setup.landLayer = setup.landLayer.astype(float)
-    setup.landLayer[setup.landLayer == 0] = np.nan
+    setup.roadKmPerCell = np.asarray([[0, 0, 0, 0, 1, 1, 2, 2, 1, 0, 1 , 1, 0],
+                                      [0, 1, 0, 0, 0, 2, 1, 2, 3, 1, 1 , 1, 0],
+                                      [1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1 , 0, 0],
+                                      [2, 1, 0, 2, 1, 1, 0, 0, 0, 1, 2 , 1, 0],
+                                      [3, 4, 1, 1, 2, 1, 1, 0, 0, 0, 2 , 1, 1],
+                                      [6, 5, 2, 3, 2, 2, 1, 0, 0, 0, 3 , 1, 2]]) 
+    
+    setup.roadKmPerCell[setup.roadKmPerCell==0] = 1
+    setup.roadKmPerCell = setup.landLayer / setup.roadKmPerCell 
+
+#    popCountList= [60000, 45000, 30000, 25000, 20000, 15000, 10000, 5000, 1500]
+    
+#    nCells = np.sum(setup.landLayer)
+    
+#    setup.population = np.zeros(setup.landLayer.shape)
+#    setup.population[setup.landLayer==1] = np.random.choice(popCountList, nCells)
+    
+    setup.mpiRankLayer = setup.landLayer.astype(float).copy()
+    setup.mpiRankLayer[setup.landLayer == 0] = np.nan
 
     if mpiSize == 1:
-        setup.landLayer = setup.landLayer*0
+        setup.mpiRankLayer = setup.mpiRankLayer*0
+    else:
+        setup.mpiRankLayer[:, :5] = setup.mpiRankLayer[:, :5] * 0
 
-    setup.regionIdRaster = ((setup.landLayer*0)+1)*6321
+    setup.regionIdRaster = ((setup.mpiRankLayer*0)+1)*6321
     #setup.regionIdRaster[3:, 0:3] = ((setup.landLayer[3:, 0:3]*0)+1) *1519
     setup.regionIDList = np.unique(
         setup.regionIdRaster[~np.isnan(setup.regionIdRaster)]).astype(int)
 
-    setup.landLayer[:, :5] = setup.landLayer[:, :5] * 0
+    
 
     # social
     setup.addYourself = True     # have the agent herself as a friend (have own observation)
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 1
+    setup.writeAgentFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -269,10 +274,11 @@ def scenarioNBH(parameterInput, dirPath):
 
     # setup.landLayer[np.isnan(setup.landLayer)] = 0
     if mpiSize > 1:
-        setup.landLayer = np.load(setup.resourcePath + 'partition_map_' + str(mpiSize) + '.npy')
+        setup.mpiRankLayer = np.load(setup.resourcePath + 'partition_map_' + str(mpiSize) + '.npy')
+        setup.landLayer = (~np.isnan(setup.mpiRankLayer)).astype(int) 
     else:
         setup.landLayer = np.load(setup.resourcePath + 'land_layer_62x118.npy')
-        setup.landLayer = setup.landLayer * 0
+        setup.landLayer =  (~np.isnan(setup.landLayer)).astype(int) 
 
     lg.info('max rank:' + str(np.nanmax(setup.landLayer)))
 
@@ -308,7 +314,7 @@ def scenarioNBH(parameterInput, dirPath):
             plt.colorbar()
         except:
             pass
-    setup.landLayer[np.isnan(setup.population)] = np.nan
+    #setup.landLayer[np.isnan(setup.population)] = np.nan
 
 
     # social
@@ -316,7 +322,7 @@ def scenarioNBH(parameterInput, dirPath):
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 1
+    setup.writeAgentFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -335,7 +341,6 @@ def scenarioNBH(parameterInput, dirPath):
                    'population']:
         setup[paName] /= setup['reductionFactor']
 
-    return setup
     return setup
 
 def scenarioGer(parameterInput, dirPath):

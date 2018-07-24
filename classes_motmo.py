@@ -1647,12 +1647,12 @@ class Household(Agent, Parallel):
             #assert not( np.isnan(utility) or np.isinf(utility)), utility ##OPTPRODUCTION
 
             #adult.node['expUtilNew'][adult.node['mobType']] = utility + np.random.randn()* world.para['utilObsError']/10
-            adult['util'] = utility
+            adult.attr['util'] = utility
 
 
             if actionTaken:
                 # self-util is only saved if an action is taken
-                adult.attr['selfUtil'][adult['mobType']] = utility
+                adult.attr['selfUtil'][adult.attr['mobType']] = utility
 
             hhUtility += utility
 
@@ -1692,7 +1692,7 @@ class Household(Agent, Parallel):
             while len([x for x in actionIdsList if x == [-1]]) < minNoAction:
                 randIdx = np.random.randint(len(actionIdsList))
                 actionIdsList[randIdx] = [-1]
-                eUtilsList[randIdx] =  [adult['util']]#[ eUtilsList[randIdx] ]
+                eUtilsList[randIdx] =  [adult.attr['util']]#[ eUtilsList[randIdx] ]
             #print 'large Household'
 
         combActions = core.cartesian(actionIdsList)
@@ -1723,7 +1723,7 @@ class Household(Agent, Parallel):
             else:
                 person.attr['lastAction'] = 0
 
-            nJourneys = person['nJourneys'].tolist()
+            nJourneys = person.attr['nJourneys'].tolist()
             emissionsPerKm = properties[EMISSIONS] * earth.market.para['reductionFactor']# in kg/km
                         
             #TODO optimize code
@@ -1749,7 +1749,7 @@ class Household(Agent, Parallel):
         Method to undo actions
         """
         for adult in persons:
-            mobType = adult.get('mobType')
+            mobType = adult.attr['mobType']
             self.loc.remFromTraffic(mobType)
 
             # remove cost of mobility to the expenses
@@ -1765,8 +1765,8 @@ class Household(Agent, Parallel):
         
         hhCarBonus = 0.2
         mobProperties = earth.market.currMobProps
-        convCell      = self.loc['convenience']
-        income        = self['income']
+        convCell      = self.loc.attr['convenience']
+        income        = self.attr['income']
         averDist      = np.mean([np.dot(ad['nJourneys'], MEAN_KM_PER_TRIP) for ad in self.adults])
 
         
@@ -1796,11 +1796,11 @@ class Household(Agent, Parallel):
         carInHh = False
         # at least one car in househould?
         # stf: !=2 ist unschön. Was ist in der neuen Version mit Car sharing?
-        if any([adult['mobType'] !=2 for adult in self.adults]):
+        if any([adult.attr['mobType'] !=2 for adult in self.adults]):
             carInHh = True
 
         # calculate money consequence
-        money = min(1., max(1e-5, 1 - self['expenses'] / self['income']))
+        money = min(1., max(1e-5, 1 - self.attr['expenses'] / self.attr['income']))
 
 
         
@@ -1810,8 +1810,8 @@ class Household(Agent, Parallel):
             hhCarBonus = 0.
 
             #get action of the person
-            actionIdx = adult['mobType']
-            mobProps  = adult['prop']
+            actionIdx = adult.attr['mobType']
+            mobProps  = adult.attr['prop']
 
 #            if (actionIdx != 2):
 #                decay = 1- (1/(1+math.exp(-0.1*(adult.get('lastAction')-market.para['mobNewPeriod']))))
@@ -1824,7 +1824,7 @@ class Household(Agent, Parallel):
             if (actionIdx > 2) and carInHh:
                 hhCarBonus = 0.2
 
-            convenience = hhLocation['convenience'][actionIdx] + hhCarBonus
+            convenience = hhLocation.attr['convenience'][actionIdx] + hhCarBonus
 
             if convenience > 1.:##OPTPRODUCTION
                 convenience = 1. ##OPTPRODUCTION
@@ -1848,7 +1848,7 @@ class Household(Agent, Parallel):
                 assert (consequence <= 1) and (consequence >= 0)              ##OPTPRODUCTION
 
 
-            adult['consequences'][:] = [convenience, ecology, money, innovation]
+            adult.attr['consequences'][:] = [convenience, ecology, money, innovation]
 
 
     def bestMobilityChoice(self, earth, persGetInfoList , forcedTryAll = False):
@@ -1867,17 +1867,17 @@ class Household(Agent, Parallel):
             oldProp = list()
             oldLastAction = list()
             for adult in self.adults:
-                oldMobType.append(adult['mobType'])
-                oldProp.append(adult['prop'])
-                oldLastAction.append(adult['lastAction'])
-            oldExpenses = self['expenses']
-            oldUtil = copy.copy(self['util'])
+                oldMobType.append(adult.attr['mobType'])
+                oldProp.append(adult.attr['prop'])
+                oldLastAction.append(adult.attr['lastAction'])
+            oldExpenses = self.attr['expenses']
+            oldUtil = copy.copy(self.attr['util'])
 
 
             # try all mobility combinations
             for combinationIdx in range(len(combinedActions)):
                 self.attr['expenses'] = 0
-                averDist      = np.mean([np.dot(ad['nJourneys'], MEAN_KM_PER_TRIP) for ad in self.adults])
+                averDist      = np.mean([np.dot(ad.attr['nJourneys'], MEAN_KM_PER_TRIP) for ad in self.adults])
                 for adultIdx, adult in enumerate(self.adults):
                     
                     mobChoice = combinedActions[combinationIdx][adultIdx]
@@ -1889,7 +1889,7 @@ class Household(Agent, Parallel):
                         #print(mobilityProperties)
                     else:
                         adult.attr['mobType'] = mobChoice
-                        mobilityProperties = market.goods[adult['mobType']].getProperties()
+                        mobilityProperties = market.goods[adult.attr['mobType']].getProperties()
                         
                         adult.attr['prop'] = mobilityProperties
                         if earth.time <  earth.para['burnIn']:
@@ -2085,7 +2085,7 @@ class Household(Agent, Parallel):
             persGetInfoList = [True] * len(self.adults) # list of persons that gather information about new mobility options
 
         else:
-            if len(self.adults)*earth.market.minPrice < self['income']: #TODO
+            if len(self.adults)*earth.market.minPrice < self.attr['income']: #TODO
 
                 #self.attr['nPers']
                 persGetInfoList = [adult.isAware(earth.para['mobNewPeriod'])  for adult in self.adults]
@@ -2483,14 +2483,6 @@ class Opinion():
 
         assert all (pref > 0) and all (pref < 1) ##OPTPRODUCTION
         
-#        print 'age: ' + str(age)    
-#        print 'income: ' + str(income)
-#        print 'sex: ' + str(sex)
-#        print 'nKids: ' + str(nKids)
-#        print 'nPers: ' + str(nPers)
-#        print 'preferences:  convenience, ecology, money, innovation'
-#        print 'preferences: ' + str(pref)
-#        print '##################################'
         return tuple(pref)
 
 # %% --- main ---

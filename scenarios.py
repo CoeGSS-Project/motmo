@@ -205,7 +205,7 @@ def scenarioTestMedium(parameterInput, dirPath):
 #    nCells = np.sum(setup.landLayer)
     
 #    setup.population = np.zeros(setup.landLayer.shape)
-#    setup.population[setup.landLayer==1] = np.random.choice(popCountList, nCells)
+#    setup.population[setup.landLayer==1]   = np.random.choice(popCountList, nCells)
     
     setup.mpiRankLayer = setup.landLayer.astype(float).copy()
     setup.mpiRankLayer[setup.landLayer == 0] = np.nan

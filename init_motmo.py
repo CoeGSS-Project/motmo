@@ -679,7 +679,8 @@ def initSpatialLayer(earth):
 
     if mpiRank == 0:
         print('Setup of the spatial layer done in'  + "{:2.4f}".format((time.time()-tt)) + ' s')
-
+        
+        
 def initInfrastructure(earth):
     tt = time.time()
     # infrastructure
@@ -763,7 +764,7 @@ def generateNetwork(earth):
         earth.view(str(earth.papi.rank) + '.png')
     if mpiRank == 0:
         print('Social network setup done in ' + "{:2.4f}".format((time.time()-tt)) + ' s')
-
+        core.plotGraph(earth, PERS, CON_PP)
 
 def initMobilityTypes(earth):
     tt = time.time()

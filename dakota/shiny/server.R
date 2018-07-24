@@ -81,12 +81,14 @@ shinyServer(function(input, output, session) {
         if (length(ids) > 100)
             ids <- ids[1:100]
 
-        print(ids)
-        
-        ggplot(ts %>% filter(id %in% ids)  %>% filter(responseDesc %in% responses),
+        ggplot(ts %>%
+                   filter(id %in% ids) %>%
+                   filter(responseDesc %in% responses) %>%
+                   filter(region %in% input$regions),
                aes(year,
                    value,
-                   group = interaction(responseDesc, id),
+                   group = interaction(responseDesc, id, region),
+                   linetype = region,
                    color = responseDesc)) + geom_line()
     }
     

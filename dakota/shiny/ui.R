@@ -31,7 +31,11 @@ shinyUI(
             ## plotlyOutput("scatter3"),
             parcoordsOutput("bar"),
             parcoordsOutput("bar2"),
-            verbatimTextOutput("summary"),
+            ## verbatimTextOutput("summary"),
+            fluidRow(
+                column(12,
+                       checkboxGroupInput("regions", "Region", regions, regions, TRUE))
+                ),
             plotlyOutput("timeSeriesComb"),
             plotlyOutput("timeSeriesElec")
         ),

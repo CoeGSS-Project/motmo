@@ -409,10 +409,10 @@ def householdSetup(earth, calibration=False):
             
 
             hh.loc['population'] = hh.loc['population'] + nPers
-            if earth.isParallel:
-                hhID = hh.attr['gID']
-            else:
-                hhID = hh.nID
+#            if earth.isParallel:
+            hhID = hh.attr['gID']
+#            else:
+#                hhID = hh.nID
             assert nAdults > 0 ##OPTPRODUCTION
             
             for iPers in range(nPers):

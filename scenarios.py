@@ -199,13 +199,6 @@ def scenarioTestMedium(parameterInput, dirPath):
     
     setup.roadKmPerCell[setup.roadKmPerCell==0] = 1
     setup.roadKmPerCell = setup.landLayer / setup.roadKmPerCell 
-
-#    popCountList= [60000, 45000, 30000, 25000, 20000, 15000, 10000, 5000, 1500]
-    
-#    nCells = np.sum(setup.landLayer)
-    
-#    setup.population = np.zeros(setup.landLayer.shape)
-#    setup.population[setup.landLayer==1]   = np.random.choice(popCountList, nCells)
     
     setup.mpiRankLayer = setup.landLayer.astype(float).copy()
     setup.mpiRankLayer[setup.landLayer == 0] = np.nan
@@ -215,10 +208,9 @@ def scenarioTestMedium(parameterInput, dirPath):
     else:
         setup.mpiRankLayer[:, :5] = setup.mpiRankLayer[:, :5] * 0
 
-    setup.regionIdRaster = ((setup.mpiRankLayer*0)+1)*6321
-    #setup.regionIdRaster[3:, 0:3] = ((setup.landLayer[3:, 0:3]*0)+1) *1519
+    setup.regionIdRaster = (setup.landLayer)*6321
     setup.regionIDList = np.unique(
-        setup.regionIdRaster[~np.isnan(setup.regionIdRaster)]).astype(int)
+        setup.regionIdRaster[setup.regionIdRaster!=0]).astype(int)
 
     
 
@@ -227,7 +219,7 @@ def scenarioTestMedium(parameterInput, dirPath):
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 0
+    setup.writeAgentFile = 1
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -282,9 +274,9 @@ def scenarioNBH(parameterInput, dirPath):
 
     lg.info('max rank:' + str(np.nanmax(setup.landLayer)))
 
-    # setup.population = gt.load_array_from_tiff(setup.resourcePath + 'pop_counts_ww_2005_62x118.tiff')
+    
     setup.population = np.load(setup.resourcePath + 'pop_counts_ww_2005_62x118.npy')
-    # setup.regionIdRaster = gt.load_array_from_tiff(setup.resourcePath + 'subRegionRaster_62x118.tiff')
+    
     setup.regionIdRaster = np.load(setup.resourcePath + 'subRegionRaster_62x118.npy')
     # bad bugfix for 4 cells
     setup.regionIdRaster[np.logical_xor(
@@ -302,6 +294,7 @@ def scenarioNBH(parameterInput, dirPath):
                                  np.isnan(setup.regionIdRaster))) == 0  # OPTPRODUCTION
     setup.regionIDList = np.unique(
         setup.regionIdRaster[~np.isnan(setup.regionIdRaster)]).astype(int)
+
 
     setup.regionIdRaster[np.isnan(setup.regionIdRaster)] = 0
     setup.regionIdRaster = setup.regionIdRaster.astype(int)

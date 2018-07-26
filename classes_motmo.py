@@ -108,7 +108,7 @@ def sumSquared1D(array):
 def prod1D(array1, array2):
     return np.multiply(array1,array2)
 
-#@njit(cache=True)
+@njit(cache=True)
 def normalizedGaussian(array, center, errStd):
     diff = (array - center) +  np.random.randn(array.shape[0])*errStd
     normDiff = np.exp(-(diff**2.) / (2.* errStd**2.))  
@@ -1353,10 +1353,10 @@ class Person(Agent, Parallel):
             idx = idx+ nP
         del idx
 
-        if world.isParallel:
-            hhIDs = [world.glob2Loc(x) for x in world.getAttrOfAgents('hhID', localIDList=personIdsAll)]
-        else:
-            hhIDs = world.getAttrOfAgents('hhID', localIDList=personIdsAll).tolist()
+#        if world.isParallel:
+        hhIDs = [world.glob2Loc(x) for x in world.getAttrOfAgents('hhID', localIDList=personIdsAll)]
+#        else:
+#            hhIDs = world.getAttrOfAgents('hhID', localIDList=personIdsAll).tolist()
         weightData[:,idxColIn] = abs(world.getAttrOfAgents('income', localIDList=hhIDs) - ownIncome)
         weightData[:,idxColPr] = world.getAttrOfAgents('preferences', localIDList=personIdsAll)
 
@@ -1475,8 +1475,8 @@ class Person(Agent, Parallel):
 #            w_full = w_fitness * w_reliability 
 #            w_full = w_full / np.sum(w_full)
             w_full = normalize(prod1D(w_fitness,weights))  
-            self.imitation =  np.random.choice(mobTypePeers, 2, p=w_full)
-        
+            self.imitation =  np.unique(np.random.choice(mobTypePeers, 2, p=w_full))
+            print(1)
 
     def step(self, earth):
 #        earth = core.earth

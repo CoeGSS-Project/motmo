@@ -241,7 +241,7 @@ def createAndReadParameters(fileName, dirPath):
         parameters = scenarios.create(parameters, dirPath)
 
         parameters = initExogeneousExperience(parameters)
-        #parameters = randomizeParameters(parameters)
+        parameters = randomizeParameters(parameters)
     else:
         parameters = None
     return parameters
@@ -493,7 +493,8 @@ def initEarth(simNo,
                   maxLinks=maxLinks,
                   debug=debug,
                   mpiComm=mpiComm,
-                  agentOutput=parameters['writeAgentFile'])
+                  agentOutput= parameters['writeAgentFile'],
+                  linkOutput = parameters['writeLinkFile'] )
 
     #global assignment
     core.earth = earth
@@ -565,6 +566,9 @@ def initScenario(earth, parameters):
     if parameters['writeAgentFile']:
         initAgentOutput(earth)
     
+    if parameters['writeLinkFile']:
+        initLinkOutput(earth)
+        
     lg.info('Init of scenario finished after -- ' + "{:2.4f}".format((time.time()-ttt)) + ' s')
     if mpiRank == 0:
         print('Scenario init done in ' + "{:2.4f}".format((time.time()-ttt)) + ' s')
@@ -618,7 +622,7 @@ def initTypes(earth):
                                                    ('costs', np.float64, 1)])
 
     global CON_CC
-    CON_CC = earth.registerLinkType('cell-cell', CELL, CELL, [('weig', np.float64, 1)])
+    CON_CC = earth.registerLinkType('cell-cell', CELL, CELL, staticProperties = [('weig', np.float64, 1)])
     global CON_CH
     CON_CH = earth.registerLinkType('cell-hh', CELL, HH)
     global CON_HH
@@ -626,7 +630,7 @@ def initTypes(earth):
     global CON_HP
     CON_HP = earth.registerLinkType('hh-pers', HH, PERS)
     global CON_PP
-    CON_PP = earth.registerLinkType('pers-pers', PERS, PERS, [('weig', np.float64,1)])
+    CON_PP = earth.registerLinkType('pers-pers', PERS, PERS, dynamicProperties = [('weig', np.float64,1)])
 
     if mpiRank == 0:
         print('Initialization of types done in ' + "{:2.4f}".format((time.time()-tt)) + ' s')
@@ -764,7 +768,7 @@ def generateNetwork(earth):
         earth.view(str(earth.papi.rank) + '.png')
     if mpiRank == 0:
         print('Social network setup done in ' + "{:2.4f}".format((time.time()-tt)) + ' s')
-        core.plotGraph(earth, PERS, CON_PP)
+        #core.plotGraph(earth, PERS, CON_PP)
 
 def initMobilityTypes(earth):
     tt = time.time()
@@ -853,7 +857,7 @@ def initAgentOutput(earth):
     #earth.initAgentFile(typ = HH)
     #earth.initAgentFile(typ = PERS)
     #earth.initAgentFile(typ = CELL)
-    earth.io.initNodeFile(earth, [CELL, HH, PERS])
+    earth.io.initAgentFile(earth, [CELL, HH, PERS])
 
 
     lg.info( 'Agent file initialized in ' + str( time.time() - tt) + ' s')
@@ -861,6 +865,24 @@ def initAgentOutput(earth):
     if mpiRank == 0:
         print('Setup of agent output done in '  +str(time.time()-tt) + 's')
 
+def initLinkOutput(earth):
+    tt = time.time()
+    #%% Init of agent file
+    tt = time.time()
+    core.mpiBarrier()
+    lg.info( 'Waited for Barrier for ' + str( time.time() - tt) + ' s')
+    tt = time.time()
+    #earth.initAgentFile(typ = HH)
+    #earth.initAgentFile(typ = PERS)
+    #earth.initAgentFile(typ = CELL)
+    earth.io.initLinkFile(earth, [CON_CC, CON_CH, CON_HP, CON_PP])
+
+
+    lg.info( 'Agent file initialized in ' + str( time.time() - tt) + ' s')
+
+    if mpiRank == 0:
+        print('Setup of agent output done in '  +str(time.time()-tt) + 's')
+        
 
 def initCacheArrays(earth):
     
@@ -900,7 +922,7 @@ def randomizeParameters(parameters):
         parameters['maxFriends'] = maxFriendsRand
     minFriendsRand  = int( parameters['minFriends'] * randDeviation(5)) 
     if minFriendsRand < parameters['maxFriends']-1:
-        parameters['minFriends'] = minFriendsRands
+        parameters['minFriends'] = minFriendsRand
     parameters['mobIncomeShare'] * randDeviation(5)
     parameters['charIncome'] * randDeviation(5)
     parameters['priceRedBCorrection'] * randDeviation(3, -3, 3)

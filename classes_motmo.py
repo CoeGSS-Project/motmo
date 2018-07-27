@@ -125,7 +125,8 @@ class Earth(World):
                  maxLinks,
                  debug,
                  mpiComm=None,
-                 agentOutput=True):
+                 agentOutput=True,
+                 linkOutput=False):
 
         nSteps     = parameters.nSteps
 
@@ -142,7 +143,8 @@ class Earth(World):
                        maxLinks=maxLinks,
                        debug=debug,
                        mpiComm=mpiComm,
-                       agentOutput=agentOutput)
+                       agentOutput=agentOutput,
+                       linkOutput=linkOutput)
 
         self.agentRec   = dict()
         self.time       = 0
@@ -428,14 +430,19 @@ class Earth(World):
         self.waitTime[self.time] += time.time()-ttWait
 
         # I/O
+        ttIO = time.time()
         ioStep = self.getParameters()["ioSteps"]
         if self.getParameters()['writeAgentFile']:
             if ioStep !=0 and (self.timeStep%ioStep == 0 or self.timeStep == self.getParameters()['nSteps']):
-                ttIO = time.time()
-                self.io.writeDataToFile(self.time, [CELL, HH, PERS])
-                self.ioTime[self.time] = time.time()-ttIO
-            else: 
-                self.ioTime[self.time] = 0
+                
+                self.io.writeAgentDataToFile(self.time, [CELL, HH, PERS])
+        
+        if self.getParameters()['writeLinkFile']:
+            if ioStep !=0 and (self.timeStep%ioStep == 0 or self.timeStep == self.getParameters()['nSteps']):
+                
+                self.io.writeLinkDataToFile(self.time, [CON_PP])
+                
+        self.ioTime[self.time] = time.time()-ttIO
 
         lg.info(('Times: tComp: '+ '{:10.5f}'.format(self.computeTime[self.time])+
               ' - tSync: '+ '{:10.5f}'.format(self.syncTime[self.time])+
@@ -1419,15 +1426,15 @@ class Person(Agent, Parallel):
     def computeCommunityUtility(self,earth, weights, commUtilPeers):
         #get weights from friends
         #weights, links = self.getAttrOfLink('weig', liTypeID=CON_PP)
-        commUtil = self.attr['commUtil'] # old value
-        selfUtil = self.attr['selfUtil']
+        commUtil = self.attr['commUtil'].copy() # old value
+        selfUtil = self.attr['selfUtil'].copy()
         # compute weighted mean of all friends
         if earth.para['weightConnections']:
             commUtil += np.dot(weights, commUtilPeers)
         else:
             commUtil += np.mean(commUtilPeers,axis=0)
 
-        mobType  = self['mobType']
+        mobType  = self.attr['mobType']
         
         
         # adding weighted selfUtil selftrust
@@ -1447,7 +1454,7 @@ class Person(Agent, Parallel):
 
             return                                                              ##OPTPRODUCTION
         
-        self.set('commUtil', commUtil)
+        self.attr['commUtil'] =  commUtil
 
         
         
@@ -1455,7 +1462,7 @@ class Person(Agent, Parallel):
     def imitate(self, utilPeers, weights, mobTypePeers):
         #pdb.set_trace()
         if self.attr['preferences'][INNO] > .15 and random.random() > .98:
-            self.imitation = [np.random.choice(self['commUtil'].shape[0])]
+            self.imitation = [np.random.choice(self.attr['commUtil'].shape[0])]
         else:
 
             if np.sum(~np.isfinite(utilPeers)) > 0:
@@ -1476,7 +1483,7 @@ class Person(Agent, Parallel):
 #            w_full = w_full / np.sum(w_full)
             w_full = normalize(prod1D(w_fitness,weights))  
             self.imitation =  np.unique(np.random.choice(mobTypePeers, 2, p=w_full))
-            print(1)
+            #print(1)
 
     def step(self, earth):
 #        earth = core.earth
@@ -1497,7 +1504,7 @@ class Person(Agent, Parallel):
         
         
         
-        if earth.para['weightConnections'] and random.random() > self['util']: 
+        if earth.para['weightConnections'] and random.random() > self.attr['util']: 
             # weight friends
             self.weightFriendExperience(earth, commUtilPeers, weights)
 
@@ -1518,7 +1525,7 @@ class Person(Agent, Parallel):
         
 
         if self['mobType']>1:
-            good = earth.market.goods[self['mobType']]
+            good = earth.market.goods[self.attr['mobType']]
             self.attr['prop'] =[good.properties['emissions'],good.properties['fixedCosts'], good.properties['operatingCosts']]
 
         # socialize
@@ -1643,7 +1650,7 @@ class Household(Agent, Parallel):
         hhUtility = 0
         for adult in self.adults:
 
-            utility = self.utilFunc(adult['consequences'], adult['preferences'])
+            utility = self.utilFunc(adult.attr['consequences'], adult.attr['preferences'])
             #assert not( np.isnan(utility) or np.isinf(utility)), utility ##OPTPRODUCTION
 
             #adult.node['expUtilNew'][adult.node['mobType']] = utility + np.random.randn()* world.para['utilObsError']/10
@@ -2178,15 +2185,6 @@ class Cell(Location, Parallel):
         self.convFunctions = list()
         self.redFactor     = earth.para['reductionFactor']
 
-
-    def initCellMemory(self, memoryLen, memeLabels):
-        """
-        deprectated
-        """
-        from collections import deque
-        self.deleteQueue = deque([list()]*(memoryLen+1))
-        self.currDelList = list()
-        self.obsMemory   = core.Memory(memeLabels)
 
 
     def getConnectedCells(self):

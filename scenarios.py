@@ -130,6 +130,7 @@ def scenarioTestSmall(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 1
+    setup.writeLinkFile = 1
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -202,12 +203,12 @@ def scenarioTestMedium(parameterInput, dirPath):
     
     setup.mpiRankLayer = setup.landLayer.astype(float).copy()
     setup.mpiRankLayer[setup.landLayer == 0] = np.nan
-
+    #print(setup.mpiRankLayer)
     if mpiSize == 1:
         setup.mpiRankLayer = setup.mpiRankLayer*0
     else:
         setup.mpiRankLayer[:, :5] = setup.mpiRankLayer[:, :5] * 0
-
+    #print(setup.mpiRankLayer)
     setup.regionIdRaster = (setup.landLayer)*6321
     setup.regionIDList = np.unique(
         setup.regionIdRaster[setup.regionIdRaster!=0]).astype(int)
@@ -219,7 +220,8 @@ def scenarioTestMedium(parameterInput, dirPath):
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 1
+    setup.writeAgentFile = 0
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -316,6 +318,7 @@ def scenarioNBH(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 0
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -424,6 +427,7 @@ def scenarioGer(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 1
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 

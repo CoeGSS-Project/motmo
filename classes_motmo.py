@@ -1216,10 +1216,10 @@ class Person(Agent, Parallel):
         friendUtil = commUtilPeers[:,self['mobType']]
         ownUtil    = self.attr['util']
 
-        prop = normalizedGaussian(friendUtil, ownUtil, world.para['utilObsError'])
+        evidence = normalizedGaussian(friendUtil, ownUtil, world.para['utilObsError'])
         prior = normalize(weights)
         assert not any(np.isnan(prior)) ##OPTPRODUCTION
-        post = normalize(prior * prop)
+        post = normalize(prior * evidence)
         
         sumWeights = sum1D(post)
         if not(np.isnan(sumWeights) or np.isinf(sumWeights)):

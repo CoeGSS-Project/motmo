@@ -84,7 +84,9 @@ def scenarioTestSmall(parameterInput, dirPath):
     # time
     setup.timeUnit = init._month  # unit of time per step
     setup.startDate = [1, 2005]
-
+    
+    setup.AgentsUpperLimit = 1000
+    setup.LinksUpperLimit  = 5000
     # spatial
     setup.reductionFactor = 5000
     setup.isSpatial = True
@@ -130,7 +132,7 @@ def scenarioTestSmall(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 1
-    setup.writeLinkFile = 1
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -165,6 +167,9 @@ def scenarioTestMedium(parameterInput, dirPath):
     setup.timeUnit = init._month  # unit of time per step
     setup.startDate = [1, 2005]
 
+    setup.AgentsUpperLimit = 10000
+    setup.LinksUpperLimit  = 50000
+    
     # spatial
     setup.isSpatial = True
     setup.spatialRedFactor = 80.
@@ -252,6 +257,9 @@ def scenarioNBH(parameterInput, dirPath):
     setup.progressBar = True
     setup.allTypeObservations = True
 
+    setup.AgentsUpperLimit = 100000
+    setup.LinksUpperLimit  = 2000000
+    
     # time
     setup.nSteps = 340     # number of simulation steps
     setup.timeUnit = init._month  # unit of time per step
@@ -355,6 +363,10 @@ def scenarioGer(parameterInput, dirPath):
     setup.burnIn = 100
     setup.omniscientBurnIn = 10  # no. of first steps of burn-in phase with omniscient agents, max. =burnIn
 
+
+    setup.AgentsUpperLimit = 1000000
+    setup.LinksUpperLimit  = 5000000
+    
     # spatial
     setup.isSpatial = True
     setup.spatialRedFactor = 1.

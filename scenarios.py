@@ -84,7 +84,9 @@ def scenarioTestSmall(parameterInput, dirPath):
     # time
     setup.timeUnit = init._month  # unit of time per step
     setup.startDate = [1, 2005]
-
+    
+    setup.AgentsUpperLimit = 1000
+    setup.LinksUpperLimit  = 5000
     # spatial
     setup.reductionFactor = 5000
     setup.isSpatial = True
@@ -130,6 +132,7 @@ def scenarioTestSmall(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 1
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -164,6 +167,9 @@ def scenarioTestMedium(parameterInput, dirPath):
     setup.timeUnit = init._month  # unit of time per step
     setup.startDate = [1, 2005]
 
+    setup.AgentsUpperLimit = 10000
+    setup.LinksUpperLimit  = 50000
+    
     # spatial
     setup.isSpatial = True
     setup.spatialRedFactor = 80.
@@ -199,26 +205,18 @@ def scenarioTestMedium(parameterInput, dirPath):
     
     setup.roadKmPerCell[setup.roadKmPerCell==0] = 1
     setup.roadKmPerCell = setup.landLayer / setup.roadKmPerCell 
-
-#    popCountList= [60000, 45000, 30000, 25000, 20000, 15000, 10000, 5000, 1500]
-    
-#    nCells = np.sum(setup.landLayer)
-    
-#    setup.population = np.zeros(setup.landLayer.shape)
-#    setup.population[setup.landLayer==1] = np.random.choice(popCountList, nCells)
     
     setup.mpiRankLayer = setup.landLayer.astype(float).copy()
     setup.mpiRankLayer[setup.landLayer == 0] = np.nan
-
+    #print(setup.mpiRankLayer)
     if mpiSize == 1:
         setup.mpiRankLayer = setup.mpiRankLayer*0
     else:
         setup.mpiRankLayer[:, :5] = setup.mpiRankLayer[:, :5] * 0
-
-    setup.regionIdRaster = ((setup.mpiRankLayer*0)+1)*6321
-    #setup.regionIdRaster[3:, 0:3] = ((setup.landLayer[3:, 0:3]*0)+1) *1519
+    #print(setup.mpiRankLayer)
+    setup.regionIdRaster = (setup.landLayer)*6321
     setup.regionIDList = np.unique(
-        setup.regionIdRaster[~np.isnan(setup.regionIdRaster)]).astype(int)
+        setup.regionIdRaster[setup.regionIdRaster!=0]).astype(int)
 
     
 
@@ -228,6 +226,7 @@ def scenarioTestMedium(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 0
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -258,6 +257,9 @@ def scenarioNBH(parameterInput, dirPath):
     setup.progressBar = True
     setup.allTypeObservations = True
 
+    setup.AgentsUpperLimit = 100000
+    setup.LinksUpperLimit  = 2000000
+    
     # time
     setup.nSteps = 340     # number of simulation steps
     setup.timeUnit = init._month  # unit of time per step
@@ -282,9 +284,9 @@ def scenarioNBH(parameterInput, dirPath):
 
     lg.info('max rank:' + str(np.nanmax(setup.landLayer)))
 
-    # setup.population = gt.load_array_from_tiff(setup.resourcePath + 'pop_counts_ww_2005_62x118.tiff')
+    
     setup.population = np.load(setup.resourcePath + 'pop_counts_ww_2005_62x118.npy')
-    # setup.regionIdRaster = gt.load_array_from_tiff(setup.resourcePath + 'subRegionRaster_62x118.tiff')
+    
     setup.regionIdRaster = np.load(setup.resourcePath + 'subRegionRaster_62x118.npy')
     # bad bugfix for 4 cells
     setup.regionIdRaster[np.logical_xor(
@@ -302,6 +304,7 @@ def scenarioNBH(parameterInput, dirPath):
                                  np.isnan(setup.regionIdRaster))) == 0  # OPTPRODUCTION
     setup.regionIDList = np.unique(
         setup.regionIdRaster[~np.isnan(setup.regionIdRaster)]).astype(int)
+
 
     setup.regionIdRaster[np.isnan(setup.regionIdRaster)] = 0
     setup.regionIdRaster = setup.regionIdRaster.astype(int)
@@ -323,6 +326,7 @@ def scenarioNBH(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 0
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 
@@ -359,6 +363,10 @@ def scenarioGer(parameterInput, dirPath):
     setup.burnIn = 100
     setup.omniscientBurnIn = 10  # no. of first steps of burn-in phase with omniscient agents, max. =burnIn
 
+
+    setup.AgentsUpperLimit = 1000000
+    setup.LinksUpperLimit  = 5000000
+    
     # spatial
     setup.isSpatial = True
     setup.spatialRedFactor = 1.
@@ -431,6 +439,7 @@ def scenarioGer(parameterInput, dirPath):
 
     # output
     setup.writeAgentFile = 1
+    setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
 

@@ -23,15 +23,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with GCFABM.  If not, see <http://earth.gnu.org/licenses/>.
 """
-import logging as lg
+#import logging as lg
 import time
 import sys
 import os
 import socket
+import numpy as np
+np.random.seed(seed=1)
 
 import init_motmo as init
 from gcfabm import core
 
+print('Rank ' +str(core.mpiRank) + ' of ' + str(core.mpiSize))
 
 debug = True
 showFigures = False
@@ -49,9 +52,9 @@ print ('Current ouputPath number is: ' + outputPath)
 dirPath = os.path.dirname(os.path.realpath(__file__))
 fileName = sys.argv[1]
 
-core.initLogger(debug, outputPath)
+lg = core.initLogger(debug, outputPath)
 
-lg.info('on node: ' + socket.gethostname())
+#lg.info('on node: ' + socket.gethostname())
 
 parameters = init.createAndReadParameters(fileName, dirPath)
 if comm is not None:

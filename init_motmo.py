@@ -596,10 +596,11 @@ def initTypes(earth):
                                 dynamicProperties = [('income', np.float64, 1),
                                                     ('expUtil', np.float64, 1),
                                                     ('util', np.float64, 1),
-                                                    ('expenses', np.float64, 1)])
+                                                    ('expenses', np.float64, 1),
+                                                    ('carTypes', np.int16, 2)])
 
     global PERS
-    PERS = earth.registerAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
+    PERS = earth.registerNodeType('pers', AgentClass=Person, GhostAgentClass= GhostPerson,
                                 staticProperties = [('gID', np.int32, 1),
                                                    ('hhID', np.int32, 1),
                                                    ('preferences', np.float64, 4),
@@ -610,13 +611,13 @@ def initTypes(earth):
                                                    ('util', np.float64, 1),     # current utility
                                                    ('commUtil', np.float64, 5), # comunity utility
                                                    ('selfUtil', np.float64, 5), # own utility at time of action
-                                                   ('mobType', np.int8, 1),
-                                                   ('prop', np.float64, 3),
+                                                   ('mobMeme', np.float64, 5),
+                                                   ('plannedUsage', np.float64,5),
+#                                                   ('prop', np.float64, 3),
                                                    ('consequences', np.float64, 4),
                                                    ('lastAction', np.int16, 1),
                                                    ('emissions', np.float64, 1),
                                                    ('costs', np.float64, 1)])
-
     global CON_CC
     CON_CC = earth.registerLinkType('cell-cell', CELL, CELL, [('weig', np.float64, 1)])
     global CON_CH

@@ -704,6 +704,17 @@ class Good():
 
     def getGlobalStock(self):
         return self.globalStock[self.goodID]
+
+class Car():
+    """
+    Market class that mangages goood, technical progress and stocks.
+    """
+    def __init__(self, label, propDict, lifetime):
+        #import global variables
+        self.label    = label
+        self.propDict = propDict      
+        self.lifetime = lifetime
+
         
 class Market():
     """
@@ -1793,52 +1804,39 @@ class Household(Agent, Parallel):
 
     def calculateConsequences(self, market):
 
-        carInHh = False
-        # at least one car in househould?
-        # stf: !=2 ist unschön. Was ist in der neuen Version mit Car sharing?
-        if any([adult['mobType'] !=2 for adult in self.adults]):
-            carInHh = True
 
         # calculate money consequence
-        money = min(1., max(1e-5, 1 - self['expenses'] / self['income']))
-
-
+        money = min(1., max(1e-5, 1 - self.get('expenses') / self.get('income')))
         
         hhLocation = self.loc
+        # make list of household's emissions per mobility type
+        emissions = np.zeros(5)
+        if self.get('carTypes')[0]>0 :
+            brownCars = [c for c in self.cars and c.carType == 'brown']
+            emissions[0] = np.mean([c.emissions for c in brownCars])
+        if self.get('carTypes')[1]>0 :
+            greenCars = [c for c in self.cars and c.carType == 'green']
+            emissions[1] = np.mean([c.emissions for c in greenCars])
+        for i in range(2,5):
+            emissions[i] = market.goods[i].properties['emissions']
         
         for adult in self.adults:
-            hhCarBonus = 0.
 
-            #get action of the person
-            actionIdx = adult['mobType']
-            mobProps  = adult['prop']
+            #get mobility meme of the person
+            meme = adult.get('mobMeme')
 
-#            if (actionIdx != 2):
-#                decay = 1- (1/(1+math.exp(-0.1*(adult.get('lastAction')-market.para['mobNewPeriod']))))
-#            else:
-#                decay = 1.
-            
-            #calculate emissions per cell
-
-
-            if (actionIdx > 2) and carInHh:
-                hhCarBonus = 0.2
-
-            convenience = hhLocation['convenience'][actionIdx] + hhCarBonus
+            convenience = sum(hhLocation.get('convenience')[i] * meme[i] for i in range(5))
 
             if convenience > 1.:##OPTPRODUCTION
                 convenience = 1. ##OPTPRODUCTION
                 lg.info('Warning: Conveniences exeeded 1.0')##OPTPRODUCTION
 
             # calculate ecology:
-            ecology   = market.ecology(mobProps[EMISSIONS])
+            ecology = sum(market.ecology(emissions[i]) * meme[i] for i in range(5))
 
             #calculate innovation
-            innovation = market.innovation[actionIdx]
-            
-
-            
-            
+            innovation = sum(market.innovation[i] * meme[i] for i in range(5))
+                                   
             # assuring that consequences are within 0 and 1
             for consequence in [convenience, ecology, money, innovation]:     ##OPTPRODUCTION
                 if not((consequence <= 1) and (consequence >= 0)):            ##OPTPRODUCTION
@@ -1847,9 +1845,8 @@ class Household(Agent, Parallel):
                     pdb.set_trace()                                           ##OPTPRODUCTION  
                 assert (consequence <= 1) and (consequence >= 0)              ##OPTPRODUCTION
 
-
-            adult['consequences'][:] = [convenience, ecology, money, innovation]
-
+            adult.data['consequences'][:] = [convenience, ecology, money, innovation]
+            
 
     def bestMobilityChoice(self, earth, persGetInfoList , forcedTryAll = False):
         """
@@ -2048,6 +2045,138 @@ class Household(Agent, Parallel):
             return bestOpt, np.max(utilities), actorIds
         else:
             return None, None, None
+        
+    def purchaseDecision(self, market):
+        demand = np.max(self.carNeed)
+        carIdx = self.carNeed.index(demand)
+        self.buyCar(carIdx, market)
+            
+    def buyCar(self, carIdx, market):
+        label = ['brown','green'][carIdx]
+        propDict = market.buyCar(carIdx)
+        lifetime = np.max(6,np.random.normal(60,10))
+        car = Car(label, propDict, lifetime)
+        self.cars.append(car)
+        self.set('carTypes')[carIdx] += 1                
+
+    def checkNeedForCar(self):
+        # consider buying car?
+        if any(n for n in self.carNeed) > 1:
+            self.action = True
+        # remove car?    
+        if (self.carNeed[0] < -1 and self.action == False):
+            brownCars = filter(lambda c: c.label == 'brown', self.cars)
+            if brownCars != []:
+                self.removeCar(random.choice(brownCars))
+        if (self.carNeed[1] < -1 and self.action == False):
+            greenCars = filter(lambda c: c.label == 'green', self.cars)
+            if greenCars != []:
+                self.removeCar(random.choice(greenCars))
+                
+    def checkCarLifetimes(self):
+        for car in self.cars:
+            if car.lifetime == 0:
+                self.removeCar(car)
+                self.action = True
+            else:
+                car.lifetime -= 1
+            
+    def removeCar(self, car):
+        if car.carType =='brown':
+            self.carTypes[0] -= 1
+        elif car.carType =='green':
+            self.carTypes[1] -= 1
+        self.cars.remove(car)
+
+    def checkCarUsage(self):
+        plannedCarUsage = np.zeros(2)
+        brownUsers = list()
+        greenUsers = list()
+        for ad in self.adults:
+            planned = ad.get('plannedUsage')
+            if planned[0]>0:
+                brownUsers.append(ad)
+            if planned[1]>0:
+                greenUsers.append(ad)
+            plannedCarUsage = np.add(plannedCarUsage, planned[:2])       
+        difference = np.add(plannedCarUsage, np.dot(self.get('carTypes'),-1)) 
+        return difference, brownUsers, greenUsers
+
+    def redistrCarUsage(self, difference, brownUsers, greenUsers):
+        if any(d > 0. for d in difference):
+            if any(d < 0. for d in difference):
+                amount = min(np.abs(difference))                
+                if difference[0] > 0.:
+                    self.redistBetweenCars('brownToGreen', amount, brownUsers)
+                else: 
+                    self.redistBetweenCars('greenToBrown', amount, greenUsers)
+                difference, brownUsers, greenUsers = self.checkCarUsage()           
+            if difference[0] > 0.:
+                self.redistToOther('fromBrown', difference[0], brownUsers)            
+            if difference[1] > 0.:
+                self.redistToOther('fromGreen', difference[1], greenUsers)
+        
+    def redistBetweenCars(self, direction, amount, users):
+        if direction == 'brownToGreen':
+            idxFrom, idxTo = 0, 1
+        elif direction == 'greenToBrown': 
+            idxFrom, idxTo = 1, 0         
+        redist = amount        
+        while redist > 0.001:
+            user = np.random.choice(users)
+            planned = user.get('plannedUsage')
+            reduction = min(redist,planned[idxFrom])
+            usageFrom = planned[idxFrom] - reduction
+            usageTo   = planned[idxTo] + reduction
+            user.data['plannedUsage'][idxFrom] = usageFrom
+            user.data['plannedUsage'][idxTo]   = usageTo
+            redist = redist - reduction
+    
+    def redistToOther(self, direction, amount, users):
+        if direction == 'fromBrown':
+            idx = 0
+        elif direction == 'fromGreen': 
+            idx = 1         
+        redist = amount        
+        while redist > 0.001:
+            user = np.random.choice(users)
+            planned = user.get('plannedUsage')
+            other = planned[2:]
+            reduction  = min(redist, planned[idx])
+            usageFrom  = planned[idx] - reduction
+            if sum(other)==0:
+                usageOther = [reduction/3, reduction/3, reduction/3]
+            else:
+                usageOther = np.dot(reduction/sum(other) + 1, other)
+            usageOther = np.dot(reduction/sum(other) + 1, other)
+            user.data['plannedUsage'][idx] = usageFrom
+            user.data['plannedUsage'][2:]  = usageOther
+            redist = redist - reduction
+
+        
+    def mobMixStep(self, earth):
+        tt = time.time()
+        
+        self.checkCarLifetimes()
+        self.checkNeedForCar()
+        if random.random() < 0.03:
+            self.action = True         
+                                  
+        if self.action:
+            difference, brownUsers, greenUsers = self.checkCarUsage() 
+            self.purchaseDecision(earth.market)
+
+        difference, brownUsers, greenUsers = self.checkCarUsage()    
+        self.redistrCarUsage(difference, brownUsers, greenUsers)
+        
+        self.calculateConsequences(earth.market)
+        
+        self.evalUtility(earth, actionTaken=True)
+
+
+            
+        self.computeTime += time.time() - tt
+
 
     def evolutionaryStep(self, earth):
         """

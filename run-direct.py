@@ -39,6 +39,8 @@ print('Rank ' +str(core.mpiRank) + ' of ' + str(core.mpiSize))
 debug = True
 showFigures = False
 
+stopAt2008 = True
+
 comm    = core.comm
 mpiRank = core.mpiRank
 
@@ -62,6 +64,7 @@ if comm is not None:
 parameters['outPath'] = outputPath
 parameters['showFigures'] = showFigures
 
+parameters['stopAt2008'] = stopAt2008
 
 earth = init.initEarth(simNo,
                        outputPath,

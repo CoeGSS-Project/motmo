@@ -1014,8 +1014,10 @@ def runModel(earth, parameters):
     for step in range(parameters.nSteps):
 
         earth.step() # looping over all cells
-        if earth.date[1] == 2008:
-            break
+        
+        if ('stopAt2008' in parameters.keys()) and parameters['stopAt2008']:
+            if earth.date[1] == 2008:
+                break
         #plt.figure()
         #plot.calGreenNeigbourhoodShareDist(earth)
         #plt.show()

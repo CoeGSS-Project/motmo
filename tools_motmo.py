@@ -267,7 +267,7 @@ def assess_km_share_county(earth, ):
     for i,cat in enumerate(regionMapping.keys()):
 
         #get region IDs of all persons
-        cells = earth.filterAgents(regionMapping[cat],en.CELL)
+        cells = earth.getAgentsByFilteredType(regionMapping[cat],en.CELL)
         peopleDict[cat] = []
         for cell in cells:
             peopleDict[cat].extend(cell.peList)
@@ -355,40 +355,41 @@ def scatterPrefVSProp(earth):
             ax.autoscale(tight=True)            
     plt.tight_layout()
 
-
+def computeError(earth):
+    errorList = []
+    err, _, _, weig = assess_km_share_age(earth)
+    weightedError = (err.sum(axis=1)*weig).mean()
+    errorList.append(weightedError)
+    print('Error in age classification       ' + str(weightedError))
+    err, _, _, weig = assess_km_share_hh_type(earth)
+    weightedError = (err.sum(axis=1)*weig).mean()
+    errorList.append(weightedError)
+    print('Error in househole classification ' + str(weightedError))
+    err, _, _, weig = assess_km_share_income(earth)
+    weightedError = (err.sum(axis=1)*weig).mean()
+    errorList.append(weightedError)
+    print('Error in income classification    ' + str(weightedError))   
+    err, _, _, weig = assess_km_share_county(earth)
+    weightedError = (err.sum(axis=1)*weig).mean()
+    errorList.append(weightedError)
+    print('Error in county classification    ' + str(weightedError))   
+    totalError = np.sum(errorList)
+    print('===========================================')
+    print('Total error                       ' + str(totalError))   
+    return errorList, totalError
+   
 def workflow(earth):
     
+    computeError(earth)
     # calls the recompute function to get updated preferences
     reComputePreferences(earth)
     #scatterPrefVSProp(earth)
-    err, _, _, weig = assess_km_share_age(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in age classification       ' + str(weightedError))
-    err, _, _, weig = assess_km_share_hh_type(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in househole classification ' + str(weightedError))
-    err, _, _, weig = assess_km_share_income(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in income classification    ' + str(weightedError))   
-    err, _, _, weig = assess_km_share_county(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in county classification    ' + str(weightedError))   
+
     for i in range(10):
-        x = earth.fakeStep()
+        earth.fakeStep()
 #        [plt.plot(i, xx,'x') for xx in x]
     
-    err, _, _, weig = assess_km_share_age(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in age classification       ' + str(weightedError))
-    err, _, _, weig = assess_km_share_hh_type(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in househole classification ' + str(weightedError))
-    err, _, _, weig = assess_km_share_income(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in income classification    ' + str(weightedError))   
-    err, _, _, weig = assess_km_share_county(earth)
-    weightedError = (err.sum(axis=1)*weig).sum()
-    print('Error in county classification    ' + str(weightedError))   
+    computeError(earth)
     
 import random
 class Opinion():
@@ -424,7 +425,7 @@ class Opinion():
         ce = float(ce)**2
 
         # priority of convinience
-        cc = 20
+        cc = 0
         cc += nKids
         cc += income/self.convIncomeFraction/2
         if sex == 1:

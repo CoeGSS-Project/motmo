@@ -52,7 +52,7 @@ mpiRank = core.mpiRank
 mpiSize = core.mpiSize
 
 
-
+en = core.enum
 
 
 
@@ -60,8 +60,8 @@ if not socket.gethostname() in ['gcf-VirtualBox', 'ThinkStation-D30']:
     plt.use('Agg')
 ###### Enums ################
 #connections
-CON_LL = 1 # loc - loc
-CON_LH = 2 # loc - household
+CON_CC = 1 # loc - loc
+CON_CH = 2 # loc - household
 CON_HH = 3 # household, household
 CON_HP = 4 # household, person
 CON_PP = 5 # person, person
@@ -75,7 +75,16 @@ PERS   = 3
 _month = 1
 _year  = 2
 
-global earth
+en.CON_LL = 1 # loc - loc
+en.CON_LH = 2 # loc - household
+en.CON_HH = 3 # household, household
+en.CON_HP = 4 # household, person
+en.CON_PP = 5 # person, person
+
+#nodes
+en.CELL   = 1
+en.HH     = 2
+en.PERS   = 3
 
 
 # Mobility setup setup
@@ -364,11 +373,12 @@ def householdSetup(earth, calibration=False):
             successFlag = False
             nPers   = int(hhData[regionIdx][currIdx[regionIdx], H5NPERS])
             #print nPers,'-',nAgents
-            ages    = list(hhData[regionIdx][currIdx[regionIdx]:currIdx[regionIdx]+nPers, H5AGE])
-            genders = list(hhData[regionIdx][currIdx[regionIdx]:currIdx[regionIdx]+nPers, H5GENDER])
+            ages    = hhData[regionIdx][currIdx[regionIdx]:currIdx[regionIdx]+nPers, H5AGE]
+            genders = hhData[regionIdx][currIdx[regionIdx]:currIdx[regionIdx]+nPers, H5GENDER]
             
-            nAdults = np.sum(np.asarray(ages)>= 18)
-            nKids = np.sum(np.asarray(ages) < 18)
+            nAdults = np.sum(ages>= 18)
+            
+            nKids = np.sum(ages < 18)
             
             if nAdults == 0:
                 currIdx[regionIdx]  += nPers
@@ -383,10 +393,16 @@ def householdSetup(earth, calibration=False):
             income = hhData[regionIdx][currIdx[regionIdx], H5INCOME]
             hhType = hhData[regionIdx][currIdx[regionIdx], H5HHTYPE]
 
-            # set minimal income
+            
             #income *= (1.- (0.1 * max(3, nKids))) # reduction fo effective income by kids
+            # calculate actual income from equqlized income
+            # see: http://ec.europa.eu/eurostat/statistics-explained/index.php?title=Glossary:Equivalised_income
+            income *= 1 + (np.sum(ages>= 14)-1) * .5 + np.sum(ages< 14) *.3
+            # to monthly income
+            income /= 12.
+            # set minimal income
             income = max(400., income)
-            income *= parameters['mobIncomeShare'] 
+            #income *= parameters['mobIncomeShare'] 
 
 
             nJourneysPerPerson = hhData[regionIdx][currIdx[regionIdx]:currIdx[regionIdx]+nPers, H5MOBDEM]
@@ -405,7 +421,7 @@ def householdSetup(earth, calibration=False):
                            hhType=hhType)
 
             hh.adults = list()
-            hh.register(earth, parentEntity=loc, liTypeID=CON_LH)
+            hh.register(earth, parentEntity=loc, liTypeID=CON_CH)
             
 
             hh.loc['population'] = hh.loc['population'] + nPers
@@ -461,7 +477,7 @@ def householdSetup(earth, calibration=False):
         earth.papi.transferGhostAgents(earth)
 
         
-    for hh in earth.getAgents.byType(HH, ghosts = False):                  ##OPTPRODUCTION
+    for hh in earth.getAgentsByType(HH, ghosts = False):                  ##OPTPRODUCTION
         assert len(hh.adults) == hh['hhSize'] - hh['nKids']  ##OPTPRODUCTION
         
     core.mpiBarrier()
@@ -523,7 +539,7 @@ def initScenario(earth, parameters):
     enums['priorities'] =   {0: 'convinience',
                              1: 'ecology',
                              2: 'money',
-                             3: 'imitation'}
+                             3: 'innovation'}
 
 
     enums['properties'] =   {1: 'emissions',
@@ -539,11 +555,23 @@ def initScenario(earth, parameters):
                                2: 'remaining money',
                                3: 'innovation'}
 
-    enums['mobilityTypes'] =   {0: 'brown',
-                                1: 'green',
-                                2: 'public transport',
-                                3: 'shared mobility',
-                                4: 'None motorized'}
+    enums['mobilityTypes'] =   {0: 'combustion',
+                                1: 'electic',
+                                2: 'public',
+                                3: 'shared',
+                                4: 'none'}
+
+    enums['hhTypes'] =   {      1: '1Adulds_young',
+                                2: '1Adulds_medium',
+                                3: '1Adulds_elderly',
+                                4: '2Adulds_young',
+                                5: '2Adulds_medium',
+                                6: '2Adulds_elderly',
+                                7: '3+Adultes',
+                                8: 'HH+kids',
+                                9: 'HH+teen',
+                                10:'HH+minor',
+                                11:'SingelParent'}
 
     initTypes(earth)
     
@@ -574,10 +602,12 @@ def initScenario(earth, parameters):
         print('Scenario init done in ' + "{:2.4f}".format((time.time()-ttt)) + ' s')
     return earth   
 
+
+
 def initTypes(earth):
     tt = time.time()
-    global CELL
-    CELL = earth.registerAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
+
+    en.CELL = earth.registerAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
                                staticProperties  = [('gID', np.int32, 1),
                                                    ('coord', np.int16, 2),
                                                    ('regionId', np.int16, 1),
@@ -589,8 +619,7 @@ def initTypes(earth):
                                                    ('emissions', np.float64, 5),
                                                    ('electricConsumption', np.float64, 1)])
 
-    global HH
-    HH = earth.registerAgentType(AgentClass=Household, 
+    en.HH = earth.registerAgentType(AgentClass=Household, 
                                 GhostAgentClass=GhostHousehold,
                                 staticProperties  = [('gID', np.int32, 1),
                                                     ('coord', np.int16, 2),
@@ -602,8 +631,8 @@ def initTypes(earth):
                                                     ('util', np.float64, 1),
                                                     ('expenses', np.float64, 1)])
 
-    global PERS
-    PERS = earth.registerAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
+
+    en.PERS = earth.registerAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
                                 staticProperties = [('gID', np.int32, 1),
                                                    ('hhID', np.int32, 1),
                                                    ('preferences', np.float64, 4),
@@ -621,16 +650,12 @@ def initTypes(earth):
                                                    ('emissions', np.float64, 1),
                                                    ('costs', np.float64, 1)])
 
-    global CON_CC
-    CON_CC = earth.registerLinkType('cell-cell', CELL, CELL, staticProperties = [('weig', np.float64, 1)])
-    global CON_CH
-    CON_CH = earth.registerLinkType('cell-hh', CELL, HH)
-    global CON_HH
-    CON_HH = earth.registerLinkType('hh-hh', HH,HH)
-    global CON_HP
-    CON_HP = earth.registerLinkType('hh-pers', HH, PERS)
-    global CON_PP
-    CON_PP = earth.registerLinkType('pers-pers', PERS, PERS, dynamicProperties = [('weig', np.float64,1)])
+
+    en.CON_CC = earth.registerLinkType('cell-cell', CELL, CELL, staticProperties = [('weig', np.float64, 1)])
+    en.CON_CH = earth.registerLinkType('cell-hh', CELL, HH)
+    en.CON_HH = earth.registerLinkType('hh-hh', HH,HH)
+    en.CON_HP = earth.registerLinkType('hh-pers', HH, PERS)
+    en.CON_PP = earth.registerLinkType('pers-pers', PERS, PERS, dynamicProperties = [('weig', np.float64,1)])
 
     if mpiRank == 0:
         print('Initialization of types done in ' + "{:2.4f}".format((time.time()-tt)) + ' s')
@@ -887,14 +912,19 @@ def initLinkOutput(earth):
 def initCacheArrays(earth):
     
     maxFriends = earth.para['maxFriends']
-    persZero = earth.getAgents.byType(PERS)[0]
+    persZero = earth.getAgentsByType(PERS)[0]
     
     nUtil = persZero['commUtil'].shape[0]
     Person.cacheCommUtil = np.zeros([maxFriends+1, nUtil])
     Person.cacheUtil     = np.zeros(maxFriends+1)
     Person.cacheMobType  = np.zeros(maxFriends+1, dtype=np.int32)
     Person.cacheWeights  = np.zeros(maxFriends+1)
-
+#    persZero._setSharedArrays( maxFriends, nUtil)
+#    persZero._setSharedArray('cacheCommUtil', np.zeros([maxFriends+1, nUtil]))
+#    persZero._setSharedArray('cacheUtil',  np.zeros(maxFriends+1))
+#    persZero._setSharedArray('cacheMobType', np.zeros(maxFriends+1, dtype=np.int32))
+#    persZero._setSharedArray('cacheWeights', np.zeros(maxFriends+1))
+    
 def initExogeneousExperience(parameters):
     inputFromGlobal         = pd.read_csv(parameters['resourcePath'] + 'inputFromGlobal.csv')
     randomFactor = (5*np.random.randn() + 100.)/100
@@ -984,7 +1014,8 @@ def runModel(earth, parameters):
     for step in range(parameters.nSteps):
 
         earth.step() # looping over all cells
-
+        if earth.date[1] == 2008:
+            break
         #plt.figure()
         #plot.calGreenNeigbourhoodShareDist(earth)
         #plt.show()

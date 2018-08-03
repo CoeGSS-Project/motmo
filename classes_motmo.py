@@ -250,7 +250,7 @@ class Earth(World):
             self.globalRecord['nChargStations_' + str(re)].set(self.time,0)
             
             
-        for cell in self.getAgents.byType(CELL):
+        for cell in self.getAgentsByType(CELL):
             regionID = str(int(cell.get('regionId')))
             self.globalRecord['stock_' + regionID].add(self.time,np.asarray(cell['carsInCell']) * self.para['reductionFactor'])
             self.globalRecord['elDemand_' + regionID].add(self.time,np.asarray(cell['electricConsumption']))
@@ -382,7 +382,9 @@ class Earth(World):
         # werden? z.b. passiert bei updateTechnologicalProgress nichts
         # da die sales=0 sind. Hab mir aber nicht alle Details
         # angeschaut, welche im Market step passieren
-        self.market.step(self) # Statistics are computed here
+        # only do technical change after the burn in phase
+        doTechProgress = self.time > self.para['burnIn']
+        self.market.step(self, doTechProgress) # Statistics are computed here
 
         
         ###### Cell loop ######
@@ -415,7 +417,7 @@ class Earth(World):
                 household.evolutionaryStep(self)
         lg.debug('Household step required ' + str(time.time()- tthh) + ' seconds')##OPTPRODUCTION
 
-        for cell in self.getAgents.byType(CELL):
+        for cell in self.getAgentsByType(CELL):
             cell.aggregateEmission(self)
 
                
@@ -461,6 +463,34 @@ class Earth(World):
         return 12 * (year - self.para['startDate'][1]) + self.para['burnIn']
 
 
+
+    def fakeStep(self):
+        """
+        This step does only includes the possible changes in the choices of the agents. 
+        No technical progress or updates of the market are done.
+        This step funtion does not procceed time, but is only used to change to an
+        other equilibrium after internal changes.
+        """
+        ###### Cell loop ######
+        #ttCell = time.time()
+        for cell in self.random.shuffleAgentsOfType(CELL):
+            cell.step(self.para, self.market.getCurrentMaturity())
+
+        ###### Person loop ######
+
+        for person in self.random.shuffleAgentsOfType(PERS):
+            person.step(self, allAware=True)
+
+        ###### Household loop ######
+        for household in self.random.shuffleAgentsOfType(HH):
+            household.evolutionaryStep(self)
+
+        for cell in self.getAgentsByType(CELL):
+            cell.aggregateEmission(self)
+        redFactor = self.para['reductionFactor']
+        currStock = [good.currStock*redFactor for good in self.market.goods.values()]
+        print(' Current global stock: ' + str(currStock))
+        return currStock
 # ToDo
 class Good():
     """
@@ -924,7 +954,7 @@ class Market():
         ecology = 1. / (1.+np.exp((emissions-self.mean['emissions'])/self.std['emissions']))
         return ecology
 
-    def step(self, world):      
+    def step(self, world, doTechProgress):      
         # check if a new car is entering the market
         if self.time in list(self.mobilityInitDict.keys()):
 
@@ -936,8 +966,7 @@ class Market():
         
         #self.updateSales() done in earth.step
         
-        # only do technical change after the burn in phase
-        doTechProgress = self.time > self.burnIn
+        
             
         for good in list(self.goods.values()):
             good.step(self, doTechProgress)
@@ -1192,16 +1221,24 @@ class Infrastructure():
 
 # %% --- entity classes ---
 class Person(Agent, Parallel):
+    commUtulCachArray = None
     __slots__ = ['gID', 'nID']
     
     def __init__(self, world, **kwProperties):
         Agent.__init__(self, world, **kwProperties)
         Parallel.__init__(self, world, **kwProperties)
 
+    @classmethod
+    def _setSharedArrays(cls, maxFriends, nUtil):
+        """ Makes the class variable _graph available at the first init of an entity"""
+        cls.cacheCommUtil = np.zeros([maxFriends+1, nUtil])
+        cls.cacheUtil     = np.zeros(maxFriends+1)
+        cls.cacheMobType  = np.zeros(maxFriends+1, dtype=np.int32)
+        cls.cacheWeights  = np.zeros(maxFriends+1)
+    
     def isAware(self, mobNewPeriod):
         # method that returns if the Persion is aktively searching for information
         return ((self.attr['lastAction'] - mobNewPeriod/10.) / mobNewPeriod)  > random.random()
-
 
     def register(self, world, parentEntity=None, liTypeID=None):
 
@@ -1485,7 +1522,7 @@ class Person(Agent, Parallel):
             self.imitation =  np.unique(np.random.choice(mobTypePeers, 2, p=w_full))
             #print(1)
 
-    def step(self, earth):
+    def step(self, earth, allAware=False):
 #        earth = core.earth
         #load data
         peerIDs         = self.getPeerIDs(liTypeID=CON_PP)
@@ -1518,7 +1555,7 @@ class Person(Agent, Parallel):
         
         self.computeCommunityUtility(earth, weights, commUtilPeers) 
         
-        if self.isAware(earth.para['mobNewPeriod']):
+        if allAware or self.isAware(earth.para['mobNewPeriod']):
             self.imitate(utilPeers, weights, mobTypePeers)
         else:
             self.imitation = [-1]
@@ -2069,7 +2106,7 @@ class Household(Agent, Parallel):
         #print 'imiate: ' +str(time.time() -tt)
         #tt2 = time.time()
         bestOpt, bestUtil, actorIds = self.householdOptimization(earth, bestIndividualActionsIds)
-        
+        #print(actorIds)
         if actorIds is not None:
             self.undoActions(earth, [self.adults[idx] for idx in actorIds])
             self.takeActions(earth, [self.adults[idx] for idx in actorIds], bestOpt)

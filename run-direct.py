@@ -37,7 +37,7 @@ from gcfabm import core
 print('Rank ' +str(core.mpiRank) + ' of ' + str(core.mpiSize))
 
 debug = True
-showFigures = False
+showFigures = 0
 
 stopAt2008 = True
 

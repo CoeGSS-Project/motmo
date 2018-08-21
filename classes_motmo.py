@@ -2373,7 +2373,7 @@ class Cell(Location, Parallel):
         """
         Step method for cells
         """
-        self.attr['convenience'] *= 0.
+        #self.attr['convenience'] *= 0.
         self.attr['emissions'] *= 0.
         self.set('electricConsumption', 0.)
         convAll = self.calculateConveniences(parameters,currentMaturity)
@@ -2452,7 +2452,7 @@ class Opinion():
         ce = float(ce)**2
 
         # priority of convinience
-        cc = 0
+        cc = 10
         cc += nKids
         cc += income/self.convIncomeFraction/2
         if sex == 1:

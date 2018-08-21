@@ -29,7 +29,7 @@ along with GCFABM.  If not, see <http://earth.gnu.org/licenses/>.
 #%% IMPORT 
 
 import sys, os, socket
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import csv
 import time
 import pprint
@@ -85,6 +85,10 @@ en.CON_PP = 5 # person, person
 en.CELL   = 1
 en.HH     = 2
 en.PERS   = 3
+
+
+
+
 
 
 # Mobility setup setup
@@ -556,7 +560,7 @@ def initScenario(earth, parameters):
                                3: 'innovation'}
 
     enums['mobilityTypes'] =   {0: 'combustion',
-                                1: 'electic',
+                                1: 'electric',
                                 2: 'public',
                                 3: 'shared',
                                 4: 'none'}
@@ -573,6 +577,23 @@ def initScenario(earth, parameters):
                                 10:'HH+minor',
                                 11:'SingelParent'}
 
+    enums['regions'] =   {942: 'Schleswig-Holstein',
+            1520: 'Hamburg',
+            6321: 'Niedersachsen',
+            1518: 'Bremen',
+            1515: 'Nordrhein-Westfalen',
+            1517: 'Hessen',
+            2331: 'Rheinland-Pfalz',
+            1516: 'Baden-Wuerttemberg',
+            2333: 'Bayern',
+            2332: 'Saarland',
+            2334: 'Berlin',
+            3562: 'Brandenburg',
+            3312: 'Mecklenburg-Vorpommern',
+            2336: 'Sachsen',
+            335: 'Sachsen-Anhalt',
+            1519: 'Thueringen'}
+
     initTypes(earth)
     
     initSpatialLayer(earth)
@@ -580,6 +601,8 @@ def initScenario(earth, parameters):
     initInfrastructure(earth)
     
     mobilitySetup(earth)
+    
+    initMobilityTypes(earth)
     
     cellTest(earth)
     
@@ -589,7 +612,7 @@ def initScenario(earth, parameters):
     
     generateNetwork(earth)
     
-    initMobilityTypes(earth)
+    
     
     if parameters['writeAgentFile']:
         initAgentOutput(earth)
@@ -692,7 +715,7 @@ def initSpatialLayer(earth):
                            out=np.zeros_like(smoothedPopulation), 
                            where=smoothedCellSize!=0)
     popDensity[popDensity>4000.]  = 4000.
-    
+    earth.para['popDensity'] = popDensity
    
     if 'regionIdRaster' in list(parameters.keys()):
 
@@ -703,6 +726,7 @@ def initSpatialLayer(earth):
             cell.attr['electricConsumption'] = 0.
             cell.cellSize = parameters['cellSizeMap'][tuple(cell['coord'])]
             cell.attr['popDensity'] = popDensity[tuple(cell['coord'])]
+    
     if earth.isParallel:        
         earth.papi.updateGhostAgents([CELL],['chargStat'])
 
@@ -720,26 +744,34 @@ def initInfrastructure(earth):
 
 #%% cell convenience test
 def cellTest(earth):
-
+    #%%
     for good in list(earth.market.goods.values()):
         
+        good.initMaturity()
         good.emissionFunction(good, earth.market)
-        #good.updateMaturity()  
+        good.updateEmissionsAndMaturity(earth.market)  
         
     nLocations = len(earth.getLocationDict())
     convArray  = np.zeros([earth.market.getNMobTypes(), nLocations])
     popArray   = np.zeros(nLocations)
     eConvArray = earth.para['landLayer'] * 0
-    
+    convMaps  = np.zeros([earth.market.getNMobTypes(), *earth.para['landLayer'].shape])
+    convMaps = convMaps * np.nan
     #import tqdm
     if earth.para['showFigures']:
         for i, cell in enumerate(earth.random.shuffleAgentsOfType(CELL)):        
             #tt = time.time()
             convAll, popDensity = cell.selfTest(earth)
-            convAll[1] = convAll[1] * cell.electricInfrastructure(100.)
+            #convAll[1] = convAll[1] * cell.electricInfrastructure(100.)
             convArray[:, i] = convAll
+            coord = tuple(cell.attr['coord'])
+            convMaps[:, coord[0], coord[1]] = convAll
             popArray[i] = popDensity
-            eConvArray[cell['coord']] = convAll[1]
+            try:
+                eConvArray[tuple(cell.attr['coord'])] = convAll[1]
+            except:
+                import pdb
+                pdb.set_trace()
             #print time.time() - ttclass
         
         
@@ -767,8 +799,15 @@ def cellTest(earth):
         #plt.clim([-2,10])
         plt.title('population')
         
+        plt.figure('Convenience maps')
+        plt.clf()
+        for i in range(5):
+            plt.subplot(3,2,i+1)
+            plt.imshow(convMaps[i,:,:])
+            plt.title(earth.getEnums()['mobilityTypes'][i])
+            plt.clim([-.1,np.nanmax(convMaps[i,:,:])])
         
-        plt.figure()
+        plt.figure('Scatter Convenience vs Density')
         for i in range(earth.market.getNMobTypes()):
             if earth.market.getNMobTypes() > 4:
                 plt.subplot(3, int(np.ceil(earth.market.getNMobTypes()/3.)), i+1)
@@ -776,7 +815,25 @@ def cellTest(earth):
                 plt.subplot(2, 2, i+1)
             plt.scatter(popArray,convArray[i,:], s=2)
             plt.title('convenience of ' + earth.getEnums()['mobilityTypes'][i])
+        plt.subplot(3, 2, 6)
+        for i in range(earth.market.getNMobTypes()):
+            plt.scatter(popArray,convArray[i,:], s=2)
         plt.show()
+        
+        #%% region plots
+        reIdArray  = earth.para['regionIdRaster']
+        reIdList   = earth.para['regionIDList']
+        popDensity = earth.para['popDensity']
+        
+        
+        for reID in reIdList:
+            plt.figure(str(reID))
+            cellDensities = popDensity[reIdArray == reID]
+            height, xPos = np.histogram(cellDensities, bins=20, range=[0,3000])
+            plt.bar(xPos[:-1] + np.diff(xPos)/2, -height / sum(height), width=np.diff(xPos))
+            for i in range(earth.market.getNMobTypes()):
+                plt.scatter(popArray,convArray[i,:], s=2)
+            
         adsf
         
 # %% Generate Network

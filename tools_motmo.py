@@ -33,16 +33,17 @@ from collections import OrderedDict
 import matplotlib.pyplot as plt
 import classes_motmo as motmo
 from gcfabm import core
-doPlot = False
+import random
+doPlot = True
 
 en = core.enum
 
-def assess_km_share_age(earth, ):
+def assess_km_share_age(earth, doPlot=False):
     """
     Method to assess the share of km per mobility type classified bye person age
     """
     enums = earth.getEnums() 
-    
+    mobDict = earth.getEnums()['mobilityTypes'].copy()
     mobTypeIDs = [0, 2, 4]
     if not hasattr(earth, 'calShareAge'):
         #read  he calibration data and save it to the world
@@ -89,14 +90,35 @@ def assess_km_share_age(earth, ):
         
         # store the absolute error in the error data frame
         errorDf.loc[cat] = np.abs(earth.calShareAge.iloc[i,:] - simulationDf.iloc[i,:])
-        
+
+    if doPlot:
+        """
+        Plotting function, but I dont know if really helpful
+        """
+        plt.figure('age classification')
+        plt.clf()
+        for ii,mobID in enumerate(mobTypeIDs):
+            plt.subplot(3,1,ii+1)
+            plt.bar([x-.25 for x in ageFilterDict.keys()], earth.calShareAge.iloc[:,ii],width=.5, color='g')
+            plt.bar(ageFilterDict.keys(),simulationDf.iloc[:,ii],width=.5)
+            plt.bar(ageFilterDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareAge.iloc[:,ii], width=.25, bottom= earth.calShareAge.iloc[:,ii], color='r')
+            plt.ylabel(mobDict[mobID])
+            plt.xticks([])
+        plt.xticks(list(ageFilterDict.keys()), earth.calShareAge.index,  rotation=10)
+
+#plt.bar([x-.25 for x in catDict.keys()], earth.calShareHHTye[:,mobID],width=.5, color='g')
+#            plt.bar(catDict.keys(),simulationDf[:,ii],width=.5, color='b')
+#            
+#            plt.bar(catDict.keys(), simulationDf[:,ii]- earth.calShareHHTye[:,mobID], width=.25, bottom= earth.calShareHHTye[:,mobID], color='r')
+            
+            
     # normalize weights
     weightOfCat = weightOfCat / np.sum(weightOfCat)
     
     return errorDf, earth.calShareAge, simulationDf, weightOfCat
 
 
-def assess_km_share_hh_type(earth, ):
+def assess_km_share_hh_type(earth, doPlot=True):
     """
     Method to assess the share of km per mobility type classified bye household type
     """
@@ -153,23 +175,28 @@ def assess_km_share_hh_type(earth, ):
         """
         Plotting function, but I dont know if really helpful
         """
+        plt.figure('househould classification')
         plt.clf()
-        i=-1
+        i=0
         for ii,mobID in enumerate(mobTypeIDs):
-            i+=2
-            plt.subplot(3,2,i)
-            plt.bar([x-.25 for x in catDict.keys()],earth.calShareHHTye[:,mobID],width=.75, color='g')
-            plt.bar(catDict.keys(),simulationDf[:,ii],width=.5)
+            i+=1
+            plt.subplot(3,1,i)
+            #plt.bar([x-.25 for x in catDict.keys()],earth.calShareHHTye[:,mobID],width=.5, color='g')
+            plt.bar([x-.25 for x in catDict.keys()], earth.calShareHHTye[:,mobID],width=.5, color='g')
+            plt.bar(catDict.keys(),simulationDf[:,ii],width=.5, color='b')
+            
+            plt.bar(catDict.keys(), simulationDf[:,ii]- earth.calShareHHTye[:,mobID], width=.25, bottom= earth.calShareHHTye[:,mobID], color='r')
             plt.ylabel(mobDict[mobID])
+            plt.xticks([])
         plt.xticks(list(catDict.keys()), list(catDict.values()),  rotation=30)
         
-        plt.subplot(1,2,2)
-        plt.pcolormesh(errorDf[:])
-        plt.colorbar()
-        plt.ylim([0,11])
-        plt.xticks([.5,1.5,2.5], [mobDict[mobID] for mobID in mobTypeIDs],  rotation=30)
-        plt.yticks([x-1 for x in list(catDict.keys())], list(catDict.values()),  rotation=60)
-        plt.subplots_adjust(left=0.1, right=0.99, top=0.99, bottom=0.1)
+        #        plt.subplot(1,2,2)
+#        plt.pcolormesh(errorDf[:])
+#        plt.colorbar()
+#        plt.ylim([0,11])
+#        plt.xticks([.5,1.5,2.5], [mobDict[mobID] for mobID in mobTypeIDs],  rotation=30)
+#        plt.yticks([x-1 for x in list(catDict.keys())], list(catDict.values()),  rotation=60)
+#        plt.subplots_adjust(left=0.1, right=0.99, top=0.99, bottom=0.1)
     
     
     # normalize weights
@@ -177,7 +204,7 @@ def assess_km_share_hh_type(earth, ):
     
     return errorDf, earth.calShareHHTye, simulationDf, weightOfCat
 
-def assess_km_share_income(earth, ):
+def assess_km_share_income(earth, doPlot=False):
     """
     Method to assess the share of km per mobility type classified bye person income
     """
@@ -229,17 +256,46 @@ def assess_km_share_income(earth, ):
         xx = [np.sum(mobKmOfCat[mobChoiceOfCat==mobOpt]) for mobOpt in mobTypeIDs]
         simulationDf.loc[cat]  = xx / np.sum(xx)        
         errorDf.loc[cat]  = np.abs(earth.calShareIncome.iloc[i,:] - simulationDf.iloc[i,:])
-    
+
+
     # normalize weights
     weightOfCat = weightOfCat / np.sum(weightOfCat)
+    
+    if doPlot:
+        """
+        Plotting function, but I dont know if really helpful
+        """
+        plt.figure('income classification')
+        plt.clf()
+        i=0
+        calMobID = 0
+        for ii,mobID in enumerate(mobTypeIDs):
+            i+=1
+            plt.subplot(3,1,i)
+            plt.bar([x-.25 for x in catDict.keys()],earth.calShareIncome.iloc[:,calMobID],width=.5, color='g')
+            plt.bar(catDict.keys(), simulationDf.iloc[:,ii],width=.5)
+            plt.bar(catDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareIncome.iloc[:,calMobID], width=.25, bottom= earth.calShareIncome.iloc[:,calMobID], color='r')
+            
+            plt.ylabel(mobDict[mobID])
+            
+            plt.xticks([])
+            calMobID += 1
+        plt.xticks(list(catDict.keys()), earth.calShareIncome.index,  rotation=10)
+
+        
+   
+    
     
     return errorDf, earth.calShareIncome, simulationDf, weightOfCat
 
 
-def assess_km_share_county(earth, ):
+def assess_km_share_county(earth, doPlot=True):
+    
     enums = earth.getEnums() 
     mobDict = earth.getEnums()['mobilityTypes'].copy()
+    #mobTypeIDs = [0, 2, 4]
     mobTypeIDs = [0, 2, 4]
+    
     
     # vector of assumed mean distances per trip
     # trips categories are 
@@ -253,10 +309,25 @@ def assess_km_share_county(earth, ):
         earth.calShareCounty = dfShareCounty
 
     regionMapping = OrderedDict([
+#            (0, lambda a : a['regionId']==942), 	#Schleswig-Holstein
             (1 , lambda a : a['regionId']==1520), #hamburg
-            (2 , lambda a : a['regionId']==6321), #bremen
-            (3 , lambda a : a['regionId']==1518)])#niedersachsen
-            
+            (2 , lambda a : a['regionId']==6321), #Niedersachsen
+            (3 , lambda a : a['regionId']==1518)]) #bremen
+#            (4, lambda a : a['regionId']==1515),	#Nordrhein-Westfalen
+#            (5, lambda a : a['regionId']==1517),	#Hessen
+#            (6, lambda a : a['regionId']==2331),	#Rheinland-Pfalz
+#            (7, lambda a : a['regionId']==1516),	#Baden-Wuerttemberg
+#            (8, lambda a : a['regionId']==2333),	#Bayern
+#            (9, lambda a : a['regionId']==2332),	#Saarland
+#            (10, lambda a : a['regionId']==2334),	#Berlin
+#            (11, lambda a : a['regionId']==3562),	#Brandenburg
+#            (12, lambda a : a['regionId']==3312),	#Mecklenburg-Vorpommern
+#            (13, lambda a : a['regionId']==2336),	#Sachsen
+#            (14, lambda a : a['regionId']==2335),   #Sachsen-Anhalt
+#            (15, lambda a : a['regionId']==1519)])	#Thueringen
+
+
+    
     errorDf = pd.DataFrame([], columns=[enums['mobilityTypes'][x] for x in mobTypeIDs])
     simulationDf = pd.DataFrame([], columns=[enums['mobilityTypes'][x] for x in mobTypeIDs])
 
@@ -284,10 +355,46 @@ def assess_km_share_county(earth, ):
         weightOfCat[i] = len(mobChoiceOfCat) 
         xx = [np.sum(mobKmOfCat[mobChoiceOfCat==mobOpt]) for mobOpt in mobTypeIDs]
         simulationDf.loc[cat]  = xx / np.sum(xx)        
-        errorDf.loc[cat]  = np.abs(earth.calShareIncome.iloc[i,:] - simulationDf.iloc[i,:])
+        errorDf.loc[cat]  = np.abs(earth.calShareCounty.iloc[cat,:].values - simulationDf.iloc[i,:])
 
-    # normalize weights
     weightOfCat = weightOfCat / np.sum(weightOfCat)
+        
+    if doPlot:
+        """
+        Plotting function, but I dont know if really helpful
+        """
+        plt.figure('county classification')
+        plt.clf()
+        i=0
+        countyStr = []
+        for countID in regionMapping.keys():
+            countyStr.append(earth.calShareCounty.index[countID][0])
+            
+        for ii, mobID in enumerate(mobTypeIDs):
+            i+=1         
+            plt.subplot(3,1,i)
+            plt.bar([x-.25 for x in regionMapping.keys()],earth.calShareCounty.iloc[list(regionMapping.keys()),ii],width=.5, color='g')
+            plt.bar(regionMapping.keys(),simulationDf.iloc[:,ii],width=.5)
+            plt.bar(regionMapping.keys(), simulationDf.iloc[:,ii].values-earth.calShareCounty.iloc[list(regionMapping.keys()),ii], width=.25, bottom= earth.calShareCounty.iloc[list(regionMapping.keys()),ii].values, color='r')
+            plt.ylabel(mobDict[mobID])
+
+            
+            plt.xticks([])
+        plt.xticks(np.arange(1,4), countyStr,  rotation=10)
+            
+
+#plt.figure('age classification')
+#        plt.clf()
+#        for ii,mobID in enumerate(mobTypeIDs):
+#            plt.subplot(3,1,ii+1)
+#            plt.bar([x-.25 for x in ageFilterDict.keys()], earth.calShareAge.iloc[:,ii],width=.5, color='g')
+#            plt.bar(ageFilterDict.keys(),simulationDf.iloc[:,ii],width=.5)
+#            plt.bar(ageFilterDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareAge.iloc[:,ii], width=.25, bottom= earth.calShareAge.iloc[:,ii], color='r')
+#            plt.ylabel(mobDict[mobID])
+#            plt.xticks([])
+#        plt.xticks(list(ageFilterDict.keys()), earth.calShareAge.index,  rotation=10)
+    # normalize weights
+
     
     return errorDf, earth.calShareCounty, simulationDf, weightOfCat        
 
@@ -298,6 +405,7 @@ def reComputePreferences(earth):
     
     en = core.enum #enumeration
     rad = earth.getParameters()['radicality']
+    mobIncomeShare = earth.getParameters()['mobIncomeShare']
     
     #re-init of the option class. Import this file again after changes done
     opGen = Opinion(earth)
@@ -305,13 +413,13 @@ def reComputePreferences(earth):
     # loop over all households and the persons in the household to get 
     # new preferences
     i =0
-    for hh in earth.getAgents.byType(agTypeID = en.HH):
+    for hh in earth.getAgentsByType(agTypeID = en.HH):
         nKids  = hh.attr['nKids']
         nPers  = hh.attr['hhSize']
         income = hh.attr['income']
         for pers in hh.adults:
             i+=1
-            pers.attr['preferences'] = opGen.getPref(pers.attr['age'],pers.attr['gender'],nKids,nPers,income, rad)
+            pers.attr['preferences'] = opGen.getPref(pers.attr['age'],pers.attr['gender'],nKids,nPers,income, rad, mobIncomeShare)
     print(str(i) + ' persons updated')
     
 def scatterPrefVSProp(earth):
@@ -331,7 +439,12 @@ def scatterPrefVSProp(earth):
     hhIDs = earth.getAttrOfAgentType('hhID',3)
     xList.append(earth.getAttrOfAgents('income', hhIDs)) 
     
-    xLabel = ['age', 'gender', 'income']
+    tmp = earth.getAttrOfAgents('hhSize', hhIDs).astype(float)
+    tmp += np.random.random(len(tmp))*.1
+    xList.append(tmp) 
+    
+    xLabel = ['age', 'gender', 'income', 'hhSize']
+
     
     yList = []
     
@@ -346,7 +459,7 @@ def scatterPrefVSProp(earth):
             ii+=1
             ax = plt.subplot(len(xList), len(yList),ii)
             
-            plt.scatter(xList[i], yList[j])
+            plt.scatter(xList[i], yList[j], s=1)
             plt.legend()
             #if j == 0:
             plt.ylabel(yLabel[j])
@@ -357,19 +470,19 @@ def scatterPrefVSProp(earth):
 
 def computeError(earth):
     errorList = []
-    err, _, _, weig = assess_km_share_age(earth)
+    err, _, _, weig = assess_km_share_age(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
     errorList.append(weightedError)
     print('Error in age classification       ' + str(weightedError))
-    err, _, _, weig = assess_km_share_hh_type(earth)
+    err, _, _, weig = assess_km_share_hh_type(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
     errorList.append(weightedError)
     print('Error in househole classification ' + str(weightedError))
-    err, _, _, weig = assess_km_share_income(earth)
+    err, _, _, weig = assess_km_share_income(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
     errorList.append(weightedError)
     print('Error in income classification    ' + str(weightedError))   
-    err, _, _, weig = assess_km_share_county(earth)
+    err, _, _, weig = assess_km_share_county(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
     errorList.append(weightedError)
     print('Error in county classification    ' + str(weightedError))   
@@ -377,21 +490,27 @@ def computeError(earth):
     print('===========================================')
     print('Total error                       ' + str(totalError))   
     return errorList, totalError
+
    
-def workflow(earth):
+def workflow(earth):    
     
+    assess_km_share_age(earth)
+    assess_km_share_hh_type(earth)
+    assess_km_share_income(earth)
+    assess_km_share_county(earth)
+      
     computeError(earth)
+    
     # calls the recompute function to get updated preferences
     reComputePreferences(earth)
-    #scatterPrefVSProp(earth)
-
+    
+    scatterPrefVSProp(earth)
+    
     for i in range(10):
         earth.fakeStep()
-#        [plt.plot(i, xx,'x') for xx in x]
-    
+
     computeError(earth)
-    
-import random
+#%%
 class Opinion():
     """
     Creates preferences for households, given their properties
@@ -403,8 +522,9 @@ class Opinion():
         self.indiRatio          = world.getParameters()['individualPrio']
         self.minIncomeEco       = world.getParameters()['minIncomeEco']
         self.convIncomeFraction = world.getParameters()['charIncome']
+        self.mobIncomeShare = world.getParameters()['mobIncomeShare']
 
-    def getPref(self, age, sex, nKids, nPers, income, radicality):
+    def getPref(self, age, sex, nKids, nPers, income, radicality, mobIncomeShare):
 
 
         # priority of ecology
@@ -425,7 +545,7 @@ class Opinion():
         ce = float(ce)**2
 
         # priority of convinience
-        cc = 0
+        cc = 10
         cc += nKids
         cc += income/self.convIncomeFraction/2
         if sex == 1:
@@ -435,7 +555,7 @@ class Opinion():
         cc = float(cc)**2
 
         # priority of money
-        cm = 0
+        cm = 10
         cm += 2* self.convIncomeFraction/income * nPers
         cm += nPers
         cm = float(cm)**2

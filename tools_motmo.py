@@ -540,13 +540,13 @@ class Opinion():
         elif income > 2 * self.minIncomeEco:
             if random.random() > 0.8:
                 ce+=4.
-
+        ce +=  float(age)/self.charAge
 
         ce = float(ce)**2
 
         # priority of convinience
         cc = 10
-        cc += nKids
+        cc += nKids*5
         cc += income/self.convIncomeFraction/2
         if sex == 1:
             cc +=1
@@ -555,7 +555,7 @@ class Opinion():
         cc = float(cc)**2
 
         # priority of money
-        cm = 10
+        cm = 5
         cm += 2* self.convIncomeFraction/income * nPers
         cm += nPers
         cm = float(cm)**2
@@ -579,7 +579,7 @@ class Opinion():
             else:
                 ci = random.random()*1
         
-        ci += (50. /age)**2                
+        ci += (50. /age)**3               
         ci = float(ci)**2
 
         # normalization

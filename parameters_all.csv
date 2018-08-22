@@ -49,7 +49,7 @@ initOperatingCostsPublic,0.25,1,0.20,0.36,"# operating costs for public transpor
 pt2030,0.8,,,,"# reduction factor for public transport emissions in 2030 (compared to 2012)"
 ptLimit,0.5,,,,"# reduction factor for public transport emissions limit (compared to 2012)"
 "#### Infrastructure PUBLIC",,,,,
-minConvP,0.23,,,,"# initial maximal initial convenience of public transport"
+minConvP,0.3,,,,"# initial maximal initial convenience of public transport"
 maxConvP,0.7,,,,"# initial maximal initial convenience of public transport"
 sigmaConvP,3000,,,,"# spread factor for convenience of public transport"
 sigmaConvPInit,2000,,,,"# initial spread factor for convenience of public transport"

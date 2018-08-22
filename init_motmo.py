@@ -384,6 +384,11 @@ def householdSetup(earth, calibration=False):
             
             nKids = np.sum(ages < 18)
             
+            if nKids > 0:
+                ageYoungestKid = min(ages)
+            else:
+                ageYoungestKid = 18
+            
             if nAdults == 0:
                 currIdx[regionIdx]  += nPers
                 lg.info('Household without adults skipped')
@@ -442,7 +447,14 @@ def householdSetup(earth, calibration=False):
 
                 if ages[iPers] < 18:
                     continue    #skip kids
-                prefTuple = opinion.getPref(ages[iPers], genders[iPers], nKids, nPers, income, parameters['radicality'])
+                prefTuple = opinion.getPref(ages[iPers], 
+                                            genders[iPers], 
+                                            nKids, 
+                                            nPers, 
+                                            income, 
+                                            ageYoungestKid,
+                                            nJourneysPerPerson[iPers],
+                                            parameters['radicality'])
 
                 
                 assert len(nJourneysPerPerson[iPers]) == 5##OPTPRODUCTION
@@ -461,7 +473,8 @@ def householdSetup(earth, calibration=False):
                               lastAction  = 0,
                               hhType      = hhType,
                               emissions   = 0.)
-                
+                # remove after calibration
+                pers.ageYoungestKid = ageYoungestKid
                 pers.imitation = np.random.randint(parameters['nMobTypes'])
                 pers.register(earth, parentEntity=hh, liTypeID=CON_HP)
                 
@@ -635,6 +648,7 @@ def initTypes(earth):
                                                    ('coord', np.int16, 2),
                                                    ('regionId', np.int16, 1),
                                                    ('popDensity', np.float64, 1),
+                                                   ('cityPopSize', np.int32, 1),
                                                    ('population', np.int16, 1)],
                                dynamicProperties = [('convenience', np.float64, 5),
                                                    ('carsInCell', np.int32, 5),
@@ -726,7 +740,8 @@ def initSpatialLayer(earth):
             cell.attr['electricConsumption'] = 0.
             cell.cellSize = parameters['cellSizeMap'][tuple(cell['coord'])]
             cell.attr['popDensity'] = popDensity[tuple(cell['coord'])]
-    
+            cell.attr['cityPopSize'] = parameters['cityPopSize'][tuple(cell['coord'])]
+            
     if earth.isParallel:        
         earth.papi.updateGhostAgents([CELL],['chargStat'])
 

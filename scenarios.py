@@ -288,6 +288,8 @@ def scenarioNBH(parameterInput, dirPath):
     setup.population = np.load(setup.resourcePath + 'pop_counts_ww_2005_62x118.npy')
     
     setup.regionIdRaster = np.load(setup.resourcePath + 'subRegionRaster_62x118.npy')
+    
+    setup.cityPopSize = np.load(setup.resourcePath + 'city_size_62x118.npy')
     # bad bugfix for 4 cells
     setup.regionIdRaster[np.logical_xor(
         np.isnan(setup.population), np.isnan(setup.regionIdRaster))] = 6321

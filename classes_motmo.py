@@ -2431,7 +2431,15 @@ class Opinion():
         self.minIncomeEco       = world.getParameters()['minIncomeEco']
         self.convIncomeFraction = world.getParameters()['charIncome']
 
-    def getPref(self, age, sex, nKids, nPers, income, radicality):
+    def getPref(self, 
+                age, 
+                sex, 
+                nKids, 
+                nPers, 
+                income,
+                ageYoungestKid,
+                nJourneys,
+                radicality):
 
 
         # priority of ecology
@@ -2452,13 +2460,17 @@ class Opinion():
         ce = float(ce)**2
 
         # priority of convinience
-        cc = 10
-        cc += nKids
+        cc = 5
+        cc += nKids/2
         cc += income/self.convIncomeFraction/2
         if sex == 1:
             cc +=1
 
-        cc += 2* float(age)/self.charAge
+        cc += (18 - ageYoungestKid) / 4
+        
+        cc += np.sum([x*y for x,y in zip(nJourneys,MEAN_KM_PER_TRIP)]) / 2000.
+        
+        cc += float(age)/self.charAge
         cc = float(cc)**2
 
         # priority of money

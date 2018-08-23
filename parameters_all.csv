@@ -37,7 +37,7 @@ weightG,1471,,,,"# average weight of green cars"
 "#### Infrastructure GREEN",,,,,
 minConvG,0.1,,,,"# minimal convenience of e-cars"
 maxConvG,0.8,,,,"# maximal convenience of e-cars"
-maxConvGInit,0.2,,,,"# initial maximal initial convenience of e-cars"
+maxConvGInit,0.18,,,,"# initial maximal initial convenience of e-cars"
 sigmaConvGInit,1500,,,,"# initial spread factor for convenience fo e-cars"
 sigmaConvG,3500,,,,"# spread factor for convenience fo combustion cars"
 muConvGInit,2600,,,,"# initial argument value for convenience maximum of e-cars"
@@ -49,7 +49,7 @@ initOperatingCostsPublic,0.25,1,0.20,0.36,"# operating costs for public transpor
 pt2030,0.8,,,,"# reduction factor for public transport emissions in 2030 (compared to 2012)"
 ptLimit,0.5,,,,"# reduction factor for public transport emissions limit (compared to 2012)"
 "#### Infrastructure PUBLIC",,,,,
-minConvP,0.3,,,,"# initial maximal initial convenience of public transport"
+minConvP,0.4,,,,"# initial maximal initial convenience of public transport"
 maxConvP,0.7,,,,"# initial maximal initial convenience of public transport"
 sigmaConvP,3000,,,,"# spread factor for convenience of public transport"
 sigmaConvPInit,2000,,,,"# initial spread factor for convenience of public transport"
@@ -63,7 +63,7 @@ weightS,1400,,,,"# average weight of shared cars"
 "#### Infrastructure SHARED",,,,,
 minConvS,0.01,,,,"# initial maximal initial convenience of car sharing"
 maxConvS,0.3,,,,"# initial maximal initial convenience  of car sharing"
-maxConvSInit,0.2,,,,
+maxConvSInit,0.18,,,,
 sigmaConvS,1000,,,,"# spread factor for convenience  of car sharing"
 sigmaConvSInit,800,,,,"# spread factor for convenience  of car sharing"
 muConvS,4000,,,,"# argument value for convenience maximum of  of car sharing"
@@ -75,7 +75,7 @@ initOperatingCostsNone,0.001,1,0.0008,0.0012,"# operating costs for none motoriz
 initMaturityN,0.4,,,,"# initial maturity of none motorized"
 "#### Infrastructure None",,,,,
 minConvN,0.01,,,,"# minimal convenience of non-motorized transport"
-maxConvN,0.03,,,,"# maximal convenience of non-motorized transport"
+maxConvN,0.06,,,,"# maximal convenience of non-motorized transport"
 sigmaConvN,3000,,,,"# initial spread factor for convenience of non-motorized transport"
 sigmaConvNInit,200,,,,"# initial spread factor for convenience of non-motorized transport"
 muConvN,4000,,,,"# argument value for convenience maximum of non-motorized transport"

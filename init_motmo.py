@@ -433,7 +433,7 @@ def householdSetup(earth, calibration=False):
             hh.register(earth, parentEntity=loc, liTypeID=CON_CH)
             
 
-            hh.loc['population'] = hh.loc['population'] + nPers
+            hh.loc.attr['population'] = hh.loc.attr['population'] + nPers
 #            if earth.isParallel:
             hhID = hh.attr['gID']
 #            else:
@@ -454,6 +454,7 @@ def householdSetup(earth, calibration=False):
                                             income, 
                                             ageYoungestKid,
                                             nJourneysPerPerson[iPers],
+                                            loc.attr['cityPopSize'],
                                             parameters['radicality'])
 
                 
@@ -494,8 +495,9 @@ def householdSetup(earth, calibration=False):
         earth.papi.transferGhostAgents(earth)
 
         
-    for hh in earth.getAgentsByType(HH, ghosts = False):                  ##OPTPRODUCTION
-        assert len(hh.adults) == hh['hhSize'] - hh['nKids']  ##OPTPRODUCTION
+    for hh in earth.getAgentsByType(HH, ghosts = False):     ##OPTPRODUCTION
+        
+        assert len(hh.adults) == hh.attr['hhSize'] - hh.attr['nKids']  ##OPTPRODUCTION
         
     core.mpiBarrier()
     lg.info(str(nAgents) + ' Agents and ' + str(nHH) +
@@ -734,13 +736,13 @@ def initSpatialLayer(earth):
     if 'regionIdRaster' in list(parameters.keys()):
 
         for cell in earth.random.shuffleAgentsOfType(CELL):
-            cell.attr['regionId'] = parameters['regionIdRaster'][tuple(cell['coord'])]
+            cell.attr['regionId'] = parameters['regionIdRaster'][tuple(cell.attr['coord'])]
             cell.attr['chargStat'] = 0
             cell.attr['emissions'] = np.zeros(len(earth.getEnums()['mobilityTypes']))
             cell.attr['electricConsumption'] = 0.
-            cell.cellSize = parameters['cellSizeMap'][tuple(cell['coord'])]
-            cell.attr['popDensity'] = popDensity[tuple(cell['coord'])]
-            cell.attr['cityPopSize'] = parameters['cityPopSize'][tuple(cell['coord'])]
+            cell.cellSize = parameters['cellSizeMap'][tuple(cell.attr['coord'])]
+            cell.attr['popDensity'] = popDensity[tuple(cell.attr['coord'])]
+            cell.attr['cityPopSize'] = parameters['cityPopSize'][tuple(cell.attr['coord'])]
             
     if earth.isParallel:        
         earth.papi.updateGhostAgents([CELL],['chargStat'])
@@ -986,7 +988,7 @@ def initCacheArrays(earth):
     maxFriends = earth.para['maxFriends']
     persZero = earth.getAgentsByType(PERS)[0]
     
-    nUtil = persZero['commUtil'].shape[0]
+    nUtil = persZero.attr['commUtil'].shape[0]
     Person.cacheCommUtil = np.zeros([maxFriends+1, nUtil])
     Person.cacheUtil     = np.zeros(maxFriends+1)
     Person.cacheMobType  = np.zeros(maxFriends+1, dtype=np.int32)

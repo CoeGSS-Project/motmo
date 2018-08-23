@@ -251,11 +251,11 @@ class Earth(World):
             
             
         for cell in self.getAgentsByType(CELL):
-            regionID = str(int(cell.get('regionId')))
-            self.globalRecord['stock_' + regionID].add(self.time,np.asarray(cell['carsInCell']) * self.para['reductionFactor'])
-            self.globalRecord['elDemand_' + regionID].add(self.time,np.asarray(cell['electricConsumption']))
-            self.globalRecord['emissions_' + regionID].add(self.time,np.asarray(cell['emissions']))
-            self.globalRecord['nChargStations_' + regionID].add(self.time,np.asarray(cell['chargStat']))
+            regionID = str(int(cell.attr['regionId']))
+            self.globalRecord['stock_' + regionID].add(self.time,np.asarray(cell.attr['carsInCell']) * self.para['reductionFactor'])
+            self.globalRecord['elDemand_' + regionID].add(self.time,np.asarray(cell.attr['electricConsumption']))
+            self.globalRecord['emissions_' + regionID].add(self.time,np.asarray(cell.attr['emissions']))
+            self.globalRecord['nChargStations_' + regionID].add(self.time,np.asarray(cell.attr['chargStat']))
                 
         # move values to global data class
         for re in self.para['regionIDList']:
@@ -1250,7 +1250,7 @@ class Person(Agent, Parallel):
 
     
     def weightFriendExperience(self, world, commUtilPeers, weights):        
-        friendUtil = commUtilPeers[:,self['mobType']]
+        friendUtil = commUtilPeers[:,self.attr['mobType']]
         ownUtil    = self.attr['util']
 
         evidence = normalizedGaussian(friendUtil, ownUtil, world.para['utilObsError'])
@@ -1346,8 +1346,8 @@ class Person(Agent, Parallel):
 
         contactList = list()
         connList   = list()
-        ownPref    = self['preferences']
-        ownIncome  = self.hh['income']
+        ownPref    = self.attr['preferences']
+        ownIncome  = self.hh.attr['income']
 
 
         #get spatial weights to all connected cells
@@ -1428,8 +1428,8 @@ class Person(Agent, Parallel):
         weightData[:,0] = weightData[:,0] / np.sum(weightData[:,0],axis=0)
 
         if np.sum(weightData[:,0]>0) < nContacts:
-            lg.info( "nID: " + str(self.nID) + ": Reducting the number of friends at " + str(self.loc['coord']))
-            lg.info( "population = " + str(self.loc['population']) + " surrounding population: " +str(np.sum(self.loc.getAttrOfPeers('population',CON_LL)[0])))
+            lg.info( "nID: " + str(self.nID) + ": Reducting the number of friends at " + str(self.loc.attr['coord']))
+            lg.info( "population = " + str(self.loc.attr['population']) + " surrounding population: " +str(np.sum(self.loc.getAttrOfPeers('population',CON_LL)[0])))
 
             nContacts = min(np.sum(weightData[:,0]>0)-1,nContacts)
 
@@ -1561,7 +1561,7 @@ class Person(Agent, Parallel):
             self.imitation = [-1]
         
 
-        if self['mobType']>1:
+        if self.attr['mobType']>1:
             good = earth.market.goods[self.attr['mobType']]
             self.attr['prop'] =[good.properties['emissions'],good.properties['fixedCosts'], good.properties['operatingCosts']]
 
@@ -1777,13 +1777,13 @@ class Household(Agent, Parallel):
                 
             # add personal emissions to household sum
             #emissions[actionIdx] += personalEmissions / 1000. # in kg Co2
-            person['emissions'] = personalEmissions / 1000. # in kg Co2
+            person.attr['emissions'] = personalEmissions / 1000. # in kg Co2
             
             #calculate costs
             personalCosts = properties[FIXEDCOSTS]
             for nTrips, avgKm in zip(nJourneys, MEAN_KM_PER_TRIP): 
                 personalCosts += float(nTrips) * avgKm * properties[OPERATINGCOSTS] 
-            person['costs'] = personalCosts
+            person.attr['costs'] = personalCosts
             # add cost of mobility to the expenses
             self.attr['expenses'] += personalCosts
 
@@ -1797,7 +1797,7 @@ class Household(Agent, Parallel):
             self.loc.remFromTraffic(mobType)
 
             # remove cost of mobility to the expenses
-            self.attr['expenses'] -= adult['costs']
+            self.attr['expenses'] -= adult.attr['costs']
 
             world.market.sellCar(mobType)
 
@@ -1811,7 +1811,7 @@ class Household(Agent, Parallel):
         mobProperties = earth.market.currMobProps
         convCell      = self.loc.attr['convenience']
         income        = self.attr['income']
-        averDist      = np.mean([np.dot(ad['nJourneys'], MEAN_KM_PER_TRIP) for ad in self.adults])
+        averDist      = np.mean([np.dot(ad.attr['nJourneys'], MEAN_KM_PER_TRIP) for ad in self.adults])
 
         
         for ix, actions in enumerate(actionIds):
@@ -2088,7 +2088,7 @@ class Household(Agent, Parallel):
                 
         bestOpt = combinedActionsOptions[np.argmax(utilities)]
         
-        if np.max(utilities) > self['util'] * earth.para['hhAcceptFactor']:
+        if np.max(utilities) > self.attr['util'] * earth.para['hhAcceptFactor']:
             return bestOpt, np.max(utilities), actorIds
         else:
             return None, None, None
@@ -2291,7 +2291,7 @@ class Cell(Location, Parallel):
         """
         convAll = list()
 
-        popDensity = np.float(self.get('popDensity'))
+        popDensity = np.float(self.attr['popDensity'])
         for i, funcCall in enumerate(self.convFunctions):
             convAll.append(funcCall(popDensity, parameters, currentMaturity[i], self))
         
@@ -2375,7 +2375,7 @@ class Cell(Location, Parallel):
         """
         #self.attr['convenience'] *= 0.
         self.attr['emissions'] *= 0.
-        self.set('electricConsumption', 0.)
+        self.attr['electricConsumption']= 0.
         convAll = self.calculateConveniences(parameters,currentMaturity)
         self.attr['convenience'][:] =  convAll
 
@@ -2439,6 +2439,7 @@ class Opinion():
                 income,
                 ageYoungestKid,
                 nJourneys,
+                cityPopSize,
                 radicality):
 
 
@@ -2460,15 +2461,15 @@ class Opinion():
         ce = float(ce)**2
 
         # priority of convinience
-        cc = 5
+        cc = 10
         cc += nKids/2
         cc += income/self.convIncomeFraction/2
         if sex == 1:
             cc +=1
-
-        cc += (18 - ageYoungestKid) / 4
+        cc += 2* float(age)/self.charAge
+        #cc += (18 - ageYoungestKid) / 4
         
-        cc += np.sum([x*y for x,y in zip(nJourneys,MEAN_KM_PER_TRIP)]) / 2000.
+        #cc += np.sum([x*y for x,y in zip(nJourneys,MEAN_KM_PER_TRIP)]) / 2000.
         
         cc += float(age)/self.charAge
         cc = float(cc)**2

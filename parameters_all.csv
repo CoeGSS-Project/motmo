@@ -50,13 +50,13 @@ pt2030,0.8,,,,"# reduction factor for public transport emissions in 2030 (compar
 ptLimit,0.5,,,,"# reduction factor for public transport emissions limit (compared to 2012)"
 "#### Infrastructure PUBLIC",,,,,
 minConvP,0.4,,,,"# initial maximal initial convenience of public transport"
-maxConvP,0.63,,,,"# initial maximal initial convenience of public transport"
+maxConvP,0.68,,,,"# initial maximal initial convenience of public transport"
 sigmaConvP,3000,,,,"# spread factor for convenience of public transport"
 sigmaConvPInit,2000,,,,"# initial spread factor for convenience of public transport"
 muConvP,4000,,,,"# argument value for convenience maximum of public transport"
 "################# SHARED          ############################",,,,,
 initEmShared,186,,,,"# initial emissions of other mobi"
-initPriceShared,50,1,8,12,"# initial price of other mobility"
+initPriceShared,10,1,8,12,"# initial price of other mobility"
 initOperatingCostsShared,0.45,1,0.36,0.54,"# opertation costs for car sharing"
 initEmShared,186,,,,"# initial emissions of other mobi"
 weightS,1400,,,,"# average weight of shared cars"
@@ -70,7 +70,7 @@ muConvS,4000,,,,"# argument value for convenience maximum of  of car sharing"
 initMaturityS,0.15,,,,"# # initial maturity of shared"
 "################# NONE          ############################",,,,,
 initEmNone,0.1,,,,"# initial emissions of other none motorized"
-initPriceNone,1,1,8,12,"# initial price of other mobility"
+initPriceNone,10,1,8,12,"# initial price of other mobility"
 initOperatingCostsNone,0.001,1,0.0008,0.0012,"# operating costs for none motorized"
 initMaturityN,0.4,,,,"# initial maturity of none motorized"
 "#### Infrastructure None",,,,,

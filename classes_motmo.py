@@ -1224,7 +1224,7 @@ class Infrastructure():
 # %% --- entity classes ---
 class Person(Agent, Parallel):
     commUtulCachArray = None
-    __slots__ = ['gID', 'nID']
+    __slots__ = ['loc', 'hh']
     
     def __init__(self, world, **kwProperties):
         Agent.__init__(self, world, **kwProperties)
@@ -1256,9 +1256,9 @@ class Person(Agent, Parallel):
         ownUtil    = self.attr['util']
 
         evidence = normalizedGaussian(friendUtil, ownUtil, world.para['utilObsError'])
-        prior = normalize(weights)
-        assert not any(np.isnan(prior)) ##OPTPRODUCTION
-        post = normalize(prior * evidence)
+        #prior = normalize(weights)
+        assert not any(np.isnan(weights)) ##OPTPRODUCTION
+        post = normalize(weights * evidence)
         
         sumWeights = sum1D(post)
         if not(np.isnan(sumWeights) or np.isinf(sumWeights)):
@@ -1599,7 +1599,6 @@ class GhostHousehold(GhostAgent):
         self.loc.hhList.append(self.nID)
 
 class Household(Agent, Parallel):
-    __slots__ = ['gID', 'nID']
     
 
         

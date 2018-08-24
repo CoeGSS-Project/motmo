@@ -27,11 +27,11 @@ along with GCFABM.  If not, see <http://earth.gnu.org/licenses/>.
 
 """
 import numpy as np
-import time
+#import time
 import pandas as pd
 from collections import OrderedDict
 import matplotlib.pyplot as plt
-import classes_motmo as motmo
+#import classes_motmo as motmo
 from gcfabm import core
 import random
 doPlot = True

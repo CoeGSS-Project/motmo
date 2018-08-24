@@ -37,7 +37,8 @@ import logging as lg
 import numpy as np
 import pandas as pd
 from scipy import signal
-
+from numba import njit
+import math
 
 sys.path.append('../gcfabm')
 from classes_motmo import Person, GhostPerson, Household, GhostHousehold, Cell, GhostCell, Earth, Opinion
@@ -96,55 +97,55 @@ def mobilitySetup(earth):
     parameters = earth.getParameters()
 
     # define convenience functions
+#    @njit
     def convenienceBrown(density, pa, kappa, cell):
         
         conv = pa['minConvB'] +\
         kappa * (pa['maxConvB'] - pa['minConvB']) * \
-        np.exp( - (density - pa['muConvB'])**2 / (2 * pa['sigmaConvB']**2))
+        math.exp( - (density - pa['muConvB'])**2 / (2 * pa['sigmaConvB']**2))
         return conv
-
+    
+#    @njit
     def convenienceGreen(density, pa, kappa, cell):
         
         conv = pa['minConvG'] + \
         (pa['maxConvGInit']-pa['minConvG']) * \
-        (1 - kappa)  * np.exp( - (density - pa['muConvGInit'])**2 / (2 * pa['sigmaConvGInit']**2)) +  \
+        (1 - kappa)  * math.exp( - (density - pa['muConvGInit'])**2 / (2 * pa['sigmaConvGInit']**2)) +  \
         (pa['maxConvG'] - pa['minConvG']) * kappa * (np.exp(-(density - pa['muConvG'])**2 / (2 * pa['sigmaConvB']**2)))
         
         
         return conv
 
-
+#    @njit
     def conveniencePublicLeuphana(density, pa, kappa, cell):
         
         currKappa   = (1 - kappa) * pa['maxConvGInit'] + kappa * pa['maxConvG']
         return pa['conveniencePublic'][cell._node['coord']] * currKappa
 
-
+#    @njit
     def conveniencePublic(density, pa, kappa, cell):
         conv = pa['minConvP'] + \
-        ((pa['maxConvP'] - pa['minConvP']) * (kappa)) * \
-        np.exp(-(density - pa['muConvP'])**2 / (2 * ((1 - kappa) * \
-                   pa['sigmaConvPInit'] + (kappa * pa['sigmaConvP']))**2))
+                ((pa['maxConvP'] - pa['minConvP']) * (kappa)) * \
+                math.exp(-(density - pa['muConvP'])**2 / (2 * ((1 - kappa) * \
+                pa['sigmaConvPInit'] + (kappa * pa['sigmaConvP']))**2))
         
         return conv
     
+#    @njit
     def convenienceShared(density, pa, kappa, cell):
-#        conv = pa['minConvS'] + \
-#        ((pa['maxConvS'] - pa['minConvS']) * (kappa)) * \
-#        np.exp(-(density - pa['muConvS'])**2 / (2 * ((1 - kappa) * \
-#                   pa['sigmaConvSInit'] + (kappa * pa['sigmaConvS']))**2))
         
         conv = (kappa/10.) + pa['minConvS'] + (kappa *(pa['maxConvS'] - pa['minConvS'] - (kappa/10.))  +\
                     ((1-kappa)* (pa['maxConvSInit'] - pa['minConvS'] - (kappa/10.)))) * \
-                    np.exp( - (density - pa['muConvS'])**2 / (2 * ((1-kappa) * \
+                    math.exp( - (density - pa['muConvS'])**2 / (2 * ((1-kappa) * \
                     pa['sigmaConvSInit'] + (kappa * pa['sigmaConvS']))**2) )        
         return conv
-        
+      
+#    @njit
     def convenienceNone(density, pa, kappa, cell):
         conv = pa['minConvN'] + \
-        ((pa['maxConvN'] - pa['minConvN']) * (kappa)) * \
-        np.exp(-(density - pa['muConvN'])**2 / (2 * ((1 - kappa) * \
-                   pa['sigmaConvNInit'] + (kappa * pa['sigmaConvN']))**2))        
+                ((pa['maxConvN'] - pa['minConvN']) * (kappa)) * \
+                math.exp(-(density - pa['muConvN'])**2 / (2 * ((1 - kappa) * \
+                pa['sigmaConvNInit'] + (kappa * pa['sigmaConvN']))**2))        
         return conv
 
 
@@ -237,7 +238,7 @@ def mobilitySetup(earth):
 
 def createAndReadParameters(fileName, dirPath):
     
-    gl.MEAN_KM_PER_TRIP = [.25, 3., 7.5, 30., 75. ]
+    gl.MEAN_KM_PER_TRIP = np.array([.25, 3., 7.5, 30., 75. ])
     
     
     def readParameterFile(parameters, fileName):

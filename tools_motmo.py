@@ -91,6 +91,9 @@ def assess_km_share_age(earth, doPlot=False):
         # store the absolute error in the error data frame
         errorDf.loc[cat] = np.abs(earth.calShareAge.iloc[i,:] - simulationDf.iloc[i,:])
 
+    # normalize weights
+    weightOfCat = weightOfCat / np.sum(weightOfCat)
+    
     if doPlot:
         """
         Plotting function, but I dont know if really helpful
@@ -101,9 +104,10 @@ def assess_km_share_age(earth, doPlot=False):
             plt.subplot(3,1,ii+1)
             plt.bar([x-.25 for x in ageFilterDict.keys()], earth.calShareAge.iloc[:,ii],width=.5, color='g')
             plt.bar(ageFilterDict.keys(),simulationDf.iloc[:,ii],width=.5)
-            plt.bar(ageFilterDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareAge.iloc[:,ii], width=.25, bottom= earth.calShareAge.iloc[:,ii], color='r')
+            plt.bar(ageFilterDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareAge.iloc[:,ii], width=weightOfCat, bottom= earth.calShareAge.iloc[:,ii], color='r')
             plt.ylabel(mobDict[mobID])
             plt.xticks([])
+            plt.ylim([0,1])
         plt.xticks(list(ageFilterDict.keys()), earth.calShareAge.index,  rotation=10)
 
 #plt.bar([x-.25 for x in catDict.keys()], earth.calShareHHTye[:,mobID],width=.5, color='g')
@@ -112,8 +116,7 @@ def assess_km_share_age(earth, doPlot=False):
 #            plt.bar(catDict.keys(), simulationDf[:,ii]- earth.calShareHHTye[:,mobID], width=.25, bottom= earth.calShareHHTye[:,mobID], color='r')
             
             
-    # normalize weights
-    weightOfCat = weightOfCat / np.sum(weightOfCat)
+
     
     return errorDf, earth.calShareAge, simulationDf, weightOfCat
 
@@ -171,6 +174,13 @@ def assess_km_share_hh_type(earth, doPlot=True):
         #store the absulte difference in the error data frame
         errorDf[i,:] = np.abs(earth.calShareHHTye[i,[0,2,4]] - simulationDf[i,:])
     
+    
+        
+
+    
+    # normalize weights
+    weightOfCat = weightOfCat / np.sum(weightOfCat)
+    
     if doPlot:
         """
         Plotting function, but I dont know if really helpful
@@ -185,23 +195,12 @@ def assess_km_share_hh_type(earth, doPlot=True):
             plt.bar([x-.25 for x in catDict.keys()], earth.calShareHHTye[:,mobID],width=.5, color='g')
             plt.bar(catDict.keys(),simulationDf[:,ii],width=.5, color='b')
             
-            plt.bar(catDict.keys(), simulationDf[:,ii]- earth.calShareHHTye[:,mobID], width=.25, bottom= earth.calShareHHTye[:,mobID], color='r')
+            plt.bar(catDict.keys(), simulationDf[:,ii]- earth.calShareHHTye[:,mobID], width=weightOfCat, bottom= earth.calShareHHTye[:,mobID], color='r')
             plt.ylabel(mobDict[mobID])
             plt.xticks([])
+            plt.ylim([0,1])
         plt.xticks(list(catDict.keys()), list(catDict.values()),  rotation=30)
         
-        #        plt.subplot(1,2,2)
-#        plt.pcolormesh(errorDf[:])
-#        plt.colorbar()
-#        plt.ylim([0,11])
-#        plt.xticks([.5,1.5,2.5], [mobDict[mobID] for mobID in mobTypeIDs],  rotation=30)
-#        plt.yticks([x-1 for x in list(catDict.keys())], list(catDict.values()),  rotation=60)
-#        plt.subplots_adjust(left=0.1, right=0.99, top=0.99, bottom=0.1)
-    
-    
-    # normalize weights
-    weightOfCat = weightOfCat / np.sum(weightOfCat)
-    
     return errorDf, earth.calShareHHTye, simulationDf, weightOfCat
 
 def assess_km_share_income(earth, doPlot=False):
@@ -274,10 +273,10 @@ def assess_km_share_income(earth, doPlot=False):
             plt.subplot(3,1,i)
             plt.bar([x-.25 for x in catDict.keys()],earth.calShareIncome.iloc[:,calMobID],width=.5, color='g')
             plt.bar(catDict.keys(), simulationDf.iloc[:,ii],width=.5)
-            plt.bar(catDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareIncome.iloc[:,calMobID], width=.25, bottom= earth.calShareIncome.iloc[:,calMobID], color='r')
+            plt.bar(catDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareIncome.iloc[:,calMobID], width=weightOfCat, bottom= earth.calShareIncome.iloc[:,calMobID], color='r')
             
             plt.ylabel(mobDict[mobID])
-            
+            plt.ylim([0,1])
             plt.xticks([])
             calMobID += 1
         plt.xticks(list(catDict.keys()), earth.calShareIncome.index,  rotation=10)
@@ -375,28 +374,111 @@ def assess_km_share_county(earth, doPlot=True):
             plt.subplot(3,1,i)
             plt.bar([x-.25 for x in regionMapping.keys()],earth.calShareCounty.iloc[list(regionMapping.keys()),ii],width=.5, color='g')
             plt.bar(regionMapping.keys(),simulationDf.iloc[:,ii],width=.5)
-            plt.bar(regionMapping.keys(), simulationDf.iloc[:,ii].values-earth.calShareCounty.iloc[list(regionMapping.keys()),ii], width=.25, bottom= earth.calShareCounty.iloc[list(regionMapping.keys()),ii].values, color='r')
+            plt.bar(regionMapping.keys(), simulationDf.iloc[:,ii].values-earth.calShareCounty.iloc[list(regionMapping.keys()),ii], width=weightOfCat, bottom= earth.calShareCounty.iloc[list(regionMapping.keys()),ii].values, color='r')
             plt.ylabel(mobDict[mobID])
-
+            plt.ylim([0,1])
             
             plt.xticks([])
         plt.xticks(np.arange(1,4), countyStr,  rotation=10)
-            
+       
+    return errorDf, earth.calShareCounty, simulationDf, weightOfCat 
 
-#plt.figure('age classification')
-#        plt.clf()
-#        for ii,mobID in enumerate(mobTypeIDs):
-#            plt.subplot(3,1,ii+1)
-#            plt.bar([x-.25 for x in ageFilterDict.keys()], earth.calShareAge.iloc[:,ii],width=.5, color='g')
-#            plt.bar(ageFilterDict.keys(),simulationDf.iloc[:,ii],width=.5)
-#            plt.bar(ageFilterDict.keys(), simulationDf.iloc[:,ii].values-earth.calShareAge.iloc[:,ii], width=.25, bottom= earth.calShareAge.iloc[:,ii], color='r')
-#            plt.ylabel(mobDict[mobID])
-#            plt.xticks([])
-#        plt.xticks(list(ageFilterDict.keys()), earth.calShareAge.index,  rotation=10)
-    # normalize weights
+def assess_km_share_density(earth, doPlot=False):
+    
+    enums = earth.getEnums() 
+    mobDict = earth.getEnums()['mobilityTypes'].copy()
+    #mobTypeIDs = [0, 2, 4]
+    mobTypeIDs = [0, 2, 4]
+    
+    
+    # vector of assumed mean distances per trip
+    # trips categories are 
+    # 0-500m, 500m - 2.5km, 2.5-10km, 10-50km and < 50km
+    MEAN_KM_PER_TRIP = [.25, 3., 7.5, 30., 75. ]
+    
+    
+    if not hasattr(earth, 'calShareDensity'):
+        #dfShareAge = pd.read_csv( 'resources/calData_age_km_share_2008.csv', index_col=1, header=1)
+        dfShareDensity = pd.read_csv( 'resources/calData_city_size_sum_kms_2008.csv',index_col=[0,1],  header=0)
+        earth.calShareDensity = dfShareDensity
+
+
+
+    #densityArray = earth.getAttrOfAgentType('cityPopSize',1)
+    
+    #sextile, bins = pd.qcut(densityArray,6, retbins=True)
+
+    densityMapping = OrderedDict([
+            (0 , lambda a :  a['cityPopSize']< 5000), 	
+            (1 , lambda a : (a['cityPopSize']>=5000) & (a['cityPopSize']< 20000)), 
+            (2 , lambda a : (a['cityPopSize']>=20000) & (a['cityPopSize']< 50000)), 
+            (3 , lambda a : (a['cityPopSize']>=50000) & (a['cityPopSize']< 100000)),
+            (4 , lambda a : (a['cityPopSize']>=100000) & (a['cityPopSize']< 500000)),
+            (5 , lambda a : a['cityPopSize']>=500000) ])
+  
+    
+    errorDf = pd.DataFrame([], columns=[enums['mobilityTypes'][x] for x in mobTypeIDs])
+    simulationDf = pd.DataFrame([], columns=[enums['mobilityTypes'][x] for x in mobTypeIDs])
+
+    # weighting array of the age categories (propotional to number of agents)
+    weightOfCat = np.zeros(len(densityMapping))
+    
+    peopleDict = OrderedDict()
+    for i,cat in enumerate(densityMapping.keys()):
+
+        #get region IDs of all persons
+        cells = earth.getAgentsByFilteredType(densityMapping[cat],en.CELL)
+        peopleDict[cat] = []
+        for cell in cells:
+            peopleDict[cat].extend(cell.peList)
+        
+        mobChoiceOfCat = earth.getAttrOfAgents('mobType' ,peopleDict[cat])
+        nJourneys = earth.getAttrOfAgents('nJourneys',  peopleDict[cat])
+        
+        if nJourneys is not None:
+            mobKmOfCat     = np.dot(nJourneys,MEAN_KM_PER_TRIP)
+        else:
+            mobKmOfCat = [0.]*5
+            mobChoiceOfCat = []
+        # weight proportial to the number of persons
+        weightOfCat[i] = len(mobChoiceOfCat) 
+        xx = [np.sum(mobKmOfCat[mobChoiceOfCat==mobOpt]) for mobOpt in mobTypeIDs]
+        simulationDf.loc[cat]  = xx / np.sum(xx)        
+        errorDf.loc[cat]  = np.abs(earth.calShareDensity.iloc[cat,:].values - simulationDf.iloc[i,:])
+
+    weightOfCat = weightOfCat / np.sum(weightOfCat)
+    
+    
+    
+    if doPlot:
+        """
+        Plotting function, but I dont know if really helpful
+        """
+        plt.figure('city classification')
+        plt.clf()
+        i=0
+        densityStr = []
+        for densityID in densityMapping.keys():
+            densityStr.append(earth.calShareDensity.index[densityID][0])
+            
+        for ii, mobID in enumerate(mobTypeIDs):
+            i+=1         
+            plt.subplot(3,1,i)
+            plt.bar([x-.25 for x in densityMapping.keys()],earth.calShareDensity.iloc[list(densityMapping.keys()),ii],width=.5, color='g')
+            plt.bar(densityMapping.keys(),simulationDf.iloc[:,ii],width=.5)
+            plt.bar(densityMapping.keys(), simulationDf.iloc[:,ii].values-earth.calShareDensity.iloc[list(densityMapping.keys()),ii], width=weightOfCat, bottom= earth.calShareDensity.iloc[list(densityMapping.keys()),ii].values, color='r')
+            plt.ylabel(mobDict[mobID])
+            plt.ylim([0,1])
+            
+            plt.xticks([])
+        plt.xticks(np.arange(0,5), densityStr,  rotation=15)
 
     
-    return errorDf, earth.calShareCounty, simulationDf, weightOfCat        
+    return errorDf, earth.calShareDensity, simulationDf, weightOfCat  
+
+
+    
+           
 
 def reComputePreferences(earth):
     """
@@ -486,6 +568,10 @@ def computeError(earth):
     weightedError = (err.sum(axis=1)*weig).mean()
     errorList.append(weightedError)
     print('Error in county classification    ' + str(weightedError))   
+    err, _, _, weig = assess_km_share_density(earth, doPlot)
+    weightedError = (err.sum(axis=1)*weig).mean()
+    errorList.append(weightedError)
+    print('Error in city classification    ' + str(weightedError)) 
     totalError = np.sum(errorList)
     print('===========================================')
     print('Total error                       ' + str(totalError))   

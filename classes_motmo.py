@@ -40,6 +40,8 @@ import copy
 import random
 import logging as lg
 
+gl = core.glVar
+
 #%% --- ENUMERATIONS / CONSTANTS---
 #connections
 CON_LL = 1 # loc - loc
@@ -71,7 +73,7 @@ PUBLIC = 2
 SHARED  = 3
 NONE   = 4
 
-MEAN_KM_PER_TRIP = [.25, 3., 7.5, 30., 75. ]
+
 
 #%% --- Global classes ---
 from numba import njit
@@ -1772,7 +1774,7 @@ class Household(Agent, Parallel):
                         
             #TODO optimize code
             personalEmissions = 0.
-            for nTrips, avgKm in zip(nJourneys, MEAN_KM_PER_TRIP): 
+            for nTrips, avgKm in zip(nJourneys, gl.MEAN_KM_PER_TRIP): 
                 personalEmissions += float(nTrips) * avgKm * emissionsPerKm  # in g Co2
                 
             # add personal emissions to household sum
@@ -1781,7 +1783,7 @@ class Household(Agent, Parallel):
             
             #calculate costs
             personalCosts = properties[FIXEDCOSTS]
-            for nTrips, avgKm in zip(nJourneys, MEAN_KM_PER_TRIP): 
+            for nTrips, avgKm in zip(nJourneys, gl.MEAN_KM_PER_TRIP): 
                 personalCosts += float(nTrips) * avgKm * properties[OPERATINGCOSTS] 
             person.attr['costs'] = personalCosts
             # add cost of mobility to the expenses
@@ -1811,7 +1813,7 @@ class Household(Agent, Parallel):
         mobProperties = earth.market.currMobProps
         convCell      = self.loc.attr['convenience']
         income        = self.attr['income']
-        averDist      = np.mean([np.dot(ad.attr['nJourneys'], MEAN_KM_PER_TRIP) for ad in self.adults])
+        averDist      = np.mean([np.dot(ad.attr['nJourneys'], gl.MEAN_KM_PER_TRIP) for ad in self.adults])
 
         
         for ix, actions in enumerate(actionIds):
@@ -1921,7 +1923,7 @@ class Household(Agent, Parallel):
             # try all mobility combinations
             for combinationIdx in range(len(combinedActions)):
                 self.attr['expenses'] = 0
-                averDist      = np.mean([np.dot(ad.attr['nJourneys'], MEAN_KM_PER_TRIP) for ad in self.adults])
+                averDist      = np.mean([np.dot(ad.attr['nJourneys'], gl.MEAN_KM_PER_TRIP) for ad in self.adults])
                 for adultIdx, adult in enumerate(self.adults):
                     
                     mobChoice = combinedActions[combinationIdx][adultIdx]
@@ -2467,9 +2469,10 @@ class Opinion():
         if sex == 1:
             cc +=1
         cc += 2* float(age)/self.charAge
-        #cc += (18 - ageYoungestKid) / 4
+#        cc += (18 - ageYoungestKid) / 5
         
-        #cc += np.sum([x*y for x,y in zip(nJourneys,MEAN_KM_PER_TRIP)]) / 2000.
+#        if age > 60: 
+        #cc += np.sum([x*y for x,y in zip(nJourneys, gl.MEAN_KM_PER_TRIP)]) / 2000.
         
         cc += float(age)/self.charAge
         cc = float(cc)**2

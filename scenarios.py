@@ -190,7 +190,7 @@ def scenarioTestMedium(parameterInput, dirPath):
                                    [a, b, c, c, d, e, f, 0, 0, 0, i, i, i],
                                    [a, a, c, c, d, f, f, 0, 0, 0, i, i, g]])
     del a, b, c, d, e, f, g, h, i
-    
+    setup.cityPopSize = setup.population
     
     setup.landLayer =  (setup.population>0).astype(int)
     

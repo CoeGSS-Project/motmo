@@ -52,8 +52,8 @@ mpiRank = core.mpiRank
 mpiSize = core.mpiSize
 
 
-en = core.enum
-
+en = core.enum # global enumeratons
+gl = core.glVar # global variables
 
 
 if not socket.gethostname() in ['gcf-VirtualBox', 'ThinkStation-D30']:
@@ -236,6 +236,10 @@ def mobilitySetup(earth):
 
 
 def createAndReadParameters(fileName, dirPath):
+    
+    gl.MEAN_KM_PER_TRIP = [.25, 3., 7.5, 30., 75. ]
+    
+    
     def readParameterFile(parameters, fileName):
         for item in csv.DictReader(open(fileName)):
             if item['name'][0] != '#':
@@ -279,7 +283,7 @@ def householdSetup(earth, calibration=False):
     H5HHTYPE = 4
     H5MOBDEM = [5, 6, 7, 8, 9]
     
-    
+        
     parameters = earth.getParameters()
     tt = time.time()
     parameters['population'] = np.ceil(parameters['population'])

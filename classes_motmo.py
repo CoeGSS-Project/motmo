@@ -250,7 +250,7 @@ class Earth(World):
             self.globalRecord['nChargStations_' + str(re)].set(self.time,0)
             
             
-        for cell in self.getAgents.byType(CELL):
+        for cell in self.getAgentsByType(CELL):
             regionID = str(int(cell.get('regionId')))
             self.globalRecord['stock_' + regionID].add(self.time,np.asarray(cell['carsInCell']) * self.para['reductionFactor'])
             self.globalRecord['elDemand_' + regionID].add(self.time,np.asarray(cell['electricConsumption']))
@@ -396,29 +396,28 @@ class Earth(World):
         ###### Person loop ######
 
         for person in self.random.shuffleAgentsOfType(PERS):
-            person.step(self)
+            person.mobMixStep(self)
         lg.debug('Person step required ' + str(time.time()- ttComp) + ' seconds')##OPTPRODUCTION
    
 
 
         ###### Household loop ######
         tthh = time.time()
-        if self.para['omniscientAgents'] or (self.time < self.para['omniscientBurnIn']):
-            for household in self.random.shuffleAgentsOfType(HH):
-                household.stepOmniscient(self)
-        else:
-            for household in self.random.shuffleAgentsOfType(HH):
-
-#                if random.random()<1e-4:
-#                    household.stepOmniscient(self)
-#                else:
-                household.evolutionaryStep(self)
+#        if self.para['omniscientAgents'] or (self.time < self.para['omniscientBurnIn']):
+#            for household in self.random.shuffleAgentsOfType(HH):
+#                household.stepOmniscient(self)
+#        else:
+#            for household in self.random.shuffleAgentsOfType(HH):
+ #               household.evolutionaryStep(self)
+        for household in self.random.shuffleAgentsOfType(HH):
+            household.mobMixStep(self)
         lg.debug('Household step required ' + str(time.time()- tthh) + ' seconds')##OPTPRODUCTION
 
-        for cell in self.getAgents.byType(CELL):
-            cell.aggregateEmission(self)
-
-               
+        for person in self.getAgentsByType(PERS):
+            person.attr['mobMeme'] = person.attr['plannedUsage']
+            
+#        for cell in self.getAgentsByType(CELL):
+#            cell.aggregateEmission(self)
 
         self.market.updateSales()
         
@@ -1222,6 +1221,11 @@ class Person(Agent, Parallel):
         self.hh = parentEntity
         self.hh.addAdult(self)
 
+    def initMobMeme(self):
+        unnorm = np.random.choice(10,5)
+        memeSum = np.sum(unnorm)
+        self.attr['mobMeme'] = [unnorm[i]/memeSum for i in range(5)]
+
     
     def weightFriendExperience(self, world, commUtilPeers, weights):        
         friendUtil = commUtilPeers[:,self['mobType']]
@@ -1465,10 +1469,7 @@ class Person(Agent, Parallel):
 
             return                                                              ##OPTPRODUCTION
         
-        self.attr['commUtil'] =  commUtil
-
-        
-        
+        self.attr['commUtil'] =  commUtil # is vector of length 5
 
     def imitate(self, utilPeers, weights, mobTypePeers):
         #pdb.set_trace()
@@ -1495,6 +1496,54 @@ class Person(Agent, Parallel):
             w_full = normalize(prod1D(w_fitness,weights))  
             self.imitation =  np.unique(np.random.choice(mobTypePeers, 2, p=w_full))
             #print(1)
+
+
+    def imitateMobMix(self, utilPeers, mobMemePeers):
+        #pdb.set_trace()
+        if self.attr['preferences'][INNO] > .15 and random.random() > .98:
+            #self.imitation = [np.random.choice(self.attr['commUtil'].shape[0])]
+            idx = np.random.choice(range(len(mobMemePeers)))
+            self.attr['plannedUsage'] = mobMemePeers[idx]
+        else:
+            if np.sum(~np.isfinite(utilPeers)) > 0:
+                lg.info('Warning for utilPeers:')
+                lg.info(str(utilPeers))
+            # weight of the fitness (quality) of the memes
+            sumUtilPeers = sum1D(utilPeers)
+            if sumUtilPeers > 0:
+                w_fitness = utilPeers / sumUtilPeers
+            else:
+                w_fitness = np.ones_like(utilPeers) / utilPeers.shape[0]
+            
+          #  w_full = normalize(prod1D(w_fitness,weights))
+            idx = np.random.choice(range(len(mobMemePeers)),1,p=w_fitness)
+            self.attr['plannedUsage'] =  mobMemePeers[idx]    
+        
+            
+    def mobMixStep(self, earth):
+#        earth = core.earth
+        #load data
+        peerIDs         = self.getPeerIDs(liTypeID=CON_PP)
+        
+        nPeers          = len(peerIDs)
+        
+    #    commUtilPeers   = Person.cacheCommUtil[:nPeers,:]
+    #    commUtilPeers[:]= self.getAttrOfPeers('commUtil', CON_PP)
+        utilPeers       = Person.cacheUtil[:nPeers]
+        utilPeers[:]    = self.getAttrOfPeers('util', CON_PP)
+    #    mobTypePeers    = Person.cacheMobType[:nPeers]
+    #    mobTypePeers[:] = self.getAttrOfPeers('mobMeme', CON_PP)
+        mobTypePeers = self.getAttrOfPeers('mobMeme', CON_PP)   #    weights         = Person.cacheWeights[:nPeers]
+    #    weights[:]      = self.getAttrOfLink('weig', CON_PP)
+        
+    #    if earth.para['weightConnections'] and random.random() > self.attr['util']: 
+    #        # weight friends
+    #        self.weightFriendExperience(earth, commUtilPeers, weights)
+        
+    #    self.computeCommunityUtility(earth, weights, commUtilPeers)   # BAUSTELLE
+        
+        self.imitateMobMix(utilPeers, mobTypePeers)        #BAUSTELLE
+        
 
     def step(self, earth):
 #        earth = core.earth
@@ -1578,12 +1627,17 @@ class Household(Agent, Parallel):
     def __init__(self, world, **kwProperties):
         Agent.__init__(self, world, **kwProperties)
         Parallel.__init__(self, world, **kwProperties)
+        
+        self.computeTime = 0
+        self.carTypes = [0., 0.]
+        self.carNeed = [0.,0.]
+        self.action = False
 
         if world.getParameters()['util'] == 'cobb':
             self.utilFunc = cobbDouglasUtilNumba
         elif world.getParameters()['util'] == 'ces':
             self.utilFunc = self.CESUtil
-        self.computeTime = 0
+
         
 
 
@@ -1668,9 +1722,9 @@ class Household(Agent, Parallel):
             adult.attr['util'] = utility
 
 
-            if actionTaken:
-                # self-util is only saved if an action is taken
-                adult.attr['selfUtil'][adult.attr['mobType']] = utility
+       #     if actionTaken:
+       #         # self-util is only saved if an action is taken
+       #         adult.attr['selfUtil'][adult.attr['mobType']] = utility
 
             hhUtility += utility
 
@@ -1723,18 +1777,54 @@ class Household(Agent, Parallel):
         return combActions, overallUtil
 
 
-    def takeActions(self, earth, persons, actionIds):
+    def takeInitialActions(self, earth, persons):
         """
         Method to execute the optimal actions for selected persons of the household
         """
-        for person, actionIdx in zip(persons, actionIds):
-
-            properties = earth.market.buyCar(actionIdx)
-            self.loc.addToTraffic(actionIdx)
+        #create initial cars for household
+        def initCar(self, carTypes, cars, randNr): 
+            if randNr < 0.001 :
+                idx = 1
+                label = 'green'
+            else: 
+                idx = 0
+                label = 'brown'                
+            carTypes[idx] += 1
+            propDict = earth.market.buyCar(idx)
+            lifetime = int(10 * random.random())
+            cars.append( Car(label, propDict, lifetime) )
+            self.loc.addToTraffic(idx)
+            return carTypes, cars        
+        
+        carTypes = [0,0]
+        cars = list()
+        randNr = random.random()
+        if len(persons) < 2:
+            if randNr < 0.6:
+                carTypes, cars = initCar(self, carTypes, cars, randNr)
+        else:
+            if randNr < 0.6:
+                carTypes, cars = initCar(self, carTypes, cars, randNr)
+                if randNr < 0.2:
+                    randNr2 = random.random()
+                    carTypes, cars = initCar(self, carTypes, cars, randNr2)
+        self.attr['carTypes'] = carTypes
+        self.cars = cars
+        
+        for person in persons:
+            # create initial mobility meme
+            car = min(1., max(0.,np.random.normal(loc=0.55, scale=0.15)))
+            if random.random() < 0.01:
+                brown, green = 0., car
+            else:
+                brown, green = car, 0.
+            public = min(1.-car, max(0.,np.random.normal(loc=0.15, scale=0.05)))
+            shared = min(1.-car-public, max(0.,np.random.normal(loc=0.0, scale=0.03)))
+            none = 1.-car-public-shared
+            person.attr['mobMeme'] = [brown, green, public, shared, none]
             
-            
-            person.attr['mobType'] = int(actionIdx)
-
+       #======  BAUSTELLE: ======
+            properties = [0,0,0]
             person.attr['prop'] = properties
             if earth.time <  earth.para['omniscientBurnIn']:
                 person.attr['lastAction'] =  random.randint(0, int(1.5*earth.para['mobNewPeriod']))
@@ -1760,6 +1850,46 @@ class Household(Agent, Parallel):
             person['costs'] = personalCosts
             # add cost of mobility to the expenses
             self.attr['expenses'] += personalCosts
+        
+        return carTypes, cars
+
+#    def takeActions(self, earth, persons, actionIds):
+#        """
+#        Method to execute the optimal actions for selected persons of the household
+#        """
+#        for person, actionIdx in zip(persons, actionIds):
+#
+#            properties = earth.market.buyCar(actionIdx)
+#            self.loc.addToTraffic(actionIdx)
+#            
+#            
+#            person.attr['mobType'] = int(actionIdx)
+#
+#            person.attr['prop'] = properties
+#            if earth.time <  earth.para['omniscientBurnIn']:
+#                person.attr['lastAction'] =  random.randint(0, int(1.5*earth.para['mobNewPeriod']))
+#            else:
+#                person.attr['lastAction'] = 0
+#
+#            nJourneys = person.attr['nJourneys'].tolist()
+#            emissionsPerKm = properties[EMISSIONS] * earth.market.para['reductionFactor']# in kg/km
+#                        
+#            #TODO optimize code
+#            personalEmissions = 0.
+#            for nTrips, avgKm in zip(nJourneys, MEAN_KM_PER_TRIP): 
+#                personalEmissions += float(nTrips) * avgKm * emissionsPerKm  # in g Co2
+#                
+#            # add personal emissions to household sum
+#            #emissions[actionIdx] += personalEmissions / 1000. # in kg Co2
+#            person['emissions'] = personalEmissions / 1000. # in kg Co2
+#            
+#            #calculate costs
+#            personalCosts = properties[FIXEDCOSTS]
+#            for nTrips, avgKm in zip(nJourneys, MEAN_KM_PER_TRIP): 
+#                personalCosts += float(nTrips) * avgKm * properties[OPERATINGCOSTS] 
+#            person['costs'] = personalCosts
+#            # add cost of mobility to the expenses
+#            self.attr['expenses'] += personalCosts
 
 
     def undoActions(self, world, persons):
@@ -1819,11 +1949,11 @@ class Household(Agent, Parallel):
         # make list of household's emissions per mobility type
         emissions = np.zeros(5)
         if self.get('carTypes')[0]>0 :
-            brownCars = [c for c in self.cars and c.carType == 'brown']
-            emissions[0] = np.mean([c.emissions for c in brownCars])
+            brownCars = [c for c in self.cars if c.label == 'brown']
+            emissions[0] = np.mean([c.propDict[EMISSIONS] for c in brownCars])
         if self.get('carTypes')[1]>0 :
-            greenCars = [c for c in self.cars and c.carType == 'green']
-            emissions[1] = np.mean([c.emissions for c in greenCars])
+            greenCars = [c for c in self.cars if c.label == 'green']
+            emissions[1] = np.mean([c.propDict[EMISSIONS] for c in greenCars])
         for i in range(2,5):
             emissions[i] = market.goods[i].properties['emissions']
         
@@ -2058,10 +2188,10 @@ class Household(Agent, Parallel):
     def buyCar(self, carIdx, market):
         label = ['brown','green'][carIdx]
         propDict = market.buyCar(carIdx)
-        lifetime = np.max(6,np.random.normal(60,10))
+        lifetime = int(max(6.,np.random.normal(60,10)))
         car = Car(label, propDict, lifetime)
         self.cars.append(car)
-        self.set('carTypes')[carIdx] += 1                
+        self.attr['carTypes'][carIdx] += 1                
 
     def checkNeedForCar(self):
         # consider buying car?
@@ -2086,9 +2216,9 @@ class Household(Agent, Parallel):
                 car.lifetime -= 1
             
     def removeCar(self, car):
-        if car.carType =='brown':
+        if car.label =='brown':
             self.carTypes[0] -= 1
-        elif car.carType =='green':
+        elif car.label =='green':
             self.carTypes[1] -= 1
         self.cars.remove(car)
 
@@ -2097,13 +2227,13 @@ class Household(Agent, Parallel):
         brownUsers = list()
         greenUsers = list()
         for ad in self.adults:
-            planned = ad.get('plannedUsage')
+            planned = ad.attr['plannedUsage']
             if planned[0]>0:
                 brownUsers.append(ad)
             if planned[1]>0:
                 greenUsers.append(ad)
             plannedCarUsage = np.add(plannedCarUsage, planned[:2])       
-        difference = np.add(plannedCarUsage, np.dot(self.get('carTypes'),-1)) 
+        difference = np.add(plannedCarUsage, np.dot(self.attr['carTypes'],-1)) 
         return difference, brownUsers, greenUsers
 
     def redistrCarUsage(self, difference, brownUsers, greenUsers):
@@ -2132,8 +2262,8 @@ class Household(Agent, Parallel):
             reduction = min(redist,planned[idxFrom])
             usageFrom = planned[idxFrom] - reduction
             usageTo   = planned[idxTo] + reduction
-            user.data['plannedUsage'][idxFrom] = usageFrom
-            user.data['plannedUsage'][idxTo]   = usageTo
+            user.attr['plannedUsage'][idxFrom] = usageFrom
+            user.attr['plannedUsage'][idxTo]   = usageTo
             redist = redist - reduction
     
     def redistToOther(self, direction, amount, users):
@@ -2144,7 +2274,7 @@ class Household(Agent, Parallel):
         redist = amount        
         while redist > 0.001:
             user = np.random.choice(users)
-            planned = user.get('plannedUsage')
+            planned = user.attr['plannedUsage']
             other = planned[2:]
             reduction  = min(redist, planned[idx])
             usageFrom  = planned[idx] - reduction
@@ -2153,8 +2283,8 @@ class Household(Agent, Parallel):
             else:
                 usageOther = np.dot(reduction/sum(other) + 1, other)
             usageOther = np.dot(reduction/sum(other) + 1, other)
-            user.data['plannedUsage'][idx] = usageFrom
-            user.data['plannedUsage'][2:]  = usageOther
+            user.attr['plannedUsage'][idx] = usageFrom
+            user.attr['plannedUsage'][2:]  = usageOther
             redist = redist - reduction
 
         
@@ -2176,8 +2306,6 @@ class Household(Agent, Parallel):
         self.calculateConsequences(earth.market)
         
         self.evalUtility(earth, actionTaken=True)
-
-
             
         self.computeTime += time.time() - tt
 
@@ -2206,84 +2334,83 @@ class Household(Agent, Parallel):
             
         self.computeTime += time.time() - tt
 
-    def step(self, earth):
-        
-        tt = time.time()
-
-        actionTaken = False
-        doCheckMobAlternatives = False
-
-        if earth.time < earth.para['burnIn']:
-            doCheckMobAlternatives = True
-            persGetInfoList = [True] * len(self.adults) # list of persons that gather information about new mobility options
-
-        else:
-            if len(self.adults)*earth.market.minPrice < self.attr['income']: #TODO
-
-                #self.attr['nPers']
-                persGetInfoList = [adult.isAware(earth.para['mobNewPeriod'])  for adult in self.adults]
-                #print persGetInfoList
-                if any(persGetInfoList):
-                    doCheckMobAlternatives = True
-
-
-        if doCheckMobAlternatives:
-
-            # return persons that are potentially performing an action, the action and the expected overall utility
-
-
-            combActions, overallUtil = self.evalExpectedUtility(earth,persGetInfoList)
-
-
-            if (combActions is not None):
-                personsToTakeAction, actions, expectedUtil = self.maxUtilChoice(combActions, overallUtil)
-                #personsToTakeAction, actions, expectedUtil = self.propUtilChoice(combActions, overallUtil)
-
-                if (personsToTakeAction is not None) and len(personsToTakeAction) > 0:
-
-                    # the propbabilty of taking action is equal to the expected raise of the expected utility
-                    if self.attr['util'] == 0:
-                        actionTaken = True
-                    elif self.decisionFunction(self.attr['util'], expectedUtil): #or (earth.time < earth.para['burnIn']):
-                        actionTaken = True
-
-            # the action is only performed if flag is True
-
-            if actionTaken:
-                self.undoActions(earth, personsToTakeAction)
-                self.takeActions(earth, personsToTakeAction, actions)
-
-        self.calculateConsequences(earth.market)
-        self.evalUtility(earth, actionTaken)
-
+#    def step(self, earth):
+#        
+#        tt = time.time()
+#
+#        actionTaken = False
+#        doCheckMobAlternatives = False
+#
+#        if earth.time < earth.para['burnIn']:
+#            doCheckMobAlternatives = True
+#            persGetInfoList = [True] * len(self.adults) # list of persons that gather information about new mobility options
+#
+#        else:
+#            if len(self.adults)*earth.market.minPrice < self.attr['income']: #TODO
+#
+#                #self.attr['nPers']
+#                persGetInfoList = [adult.isAware(earth.para['mobNewPeriod'])  for adult in self.adults]
+#                #print persGetInfoList
+#                if any(persGetInfoList):
+#                    doCheckMobAlternatives = True
+#
+#
+#        if doCheckMobAlternatives:
+#
+#            # return persons that are potentially performing an action, the action and the expected overall utility
+#
+#
+#            combActions, overallUtil = self.evalExpectedUtility(earth,persGetInfoList)
+#
+#
+#            if (combActions is not None):
+#                personsToTakeAction, actions, expectedUtil = self.maxUtilChoice(combActions, overallUtil)
+#                #personsToTakeAction, actions, expectedUtil = self.propUtilChoice(combActions, overallUtil)
+#
+#                if (personsToTakeAction is not None) and len(personsToTakeAction) > 0:
+#
+#                    # the propbabilty of taking action is equal to the expected raise of the expected utility
+#                    if self.attr['util'] == 0:
+#                        actionTaken = True
+#                    elif self.decisionFunction(self.attr['util'], expectedUtil): #or (earth.time < earth.para['burnIn']):
+#                        actionTaken = True
+#
+#            # the action is only performed if flag is True
+#
 #            if actionTaken:
-#                self.shareExperience(earth)
-        self.computeTime += time.time() - tt
+#                self.undoActions(earth, personsToTakeAction)
+#                self.takeActions(earth, personsToTakeAction, actions)
+#
+#        self.calculateConsequences(earth.market)
+#        self.evalUtility(earth, actionTaken)
+#
+##            if actionTaken:
+##                self.shareExperience(earth)
+#        self.computeTime += time.time() - tt
 
-
-    def stepOmniscient(self, earth):
-        tt = time.time()
-
-        actionTaken = False
-        doCheckMobAlternatives = False
-
-        if len(self.adults)*earth.market.minPrice < self.attr['income']:
-
-            if earth.time < earth.para['burnIn']:
-                doCheckMobAlternatives = True
-                persGetInfoList = [True] * len(self.adults) # list of persons that gather information about new mobility options
-            else:
-                persGetInfoList = [adult.isAware(earth.para['mobNewPeriod'])  for adult in self.adults]
-                if any (persGetInfoList):
-                    doCheckMobAlternatives = True
-
-        if doCheckMobAlternatives:
-            actionTaken = self.bestMobilityChoice(earth, persGetInfoList)
-            self.calculateConsequences(earth.market)
-            util = self.evalUtility(earth, actionTaken)
-            #self.evalExpectedUtility(earth, [True] * len(self.adults))
-
-        self.computeTime += time.time() - tt
+#    def stepOmniscient(self, earth):
+#        tt = time.time()
+#
+#        actionTaken = False
+#        doCheckMobAlternatives = False
+#
+#        if len(self.adults)*earth.market.minPrice < self.attr['income']:
+#
+#            if earth.time < earth.para['burnIn']:
+#                doCheckMobAlternatives = True
+#                persGetInfoList = [True] * len(self.adults) # list of persons that gather information about new mobility options
+#            else:
+#                persGetInfoList = [adult.isAware(earth.para['mobNewPeriod'])  for adult in self.adults]
+#                if any (persGetInfoList):
+#                    doCheckMobAlternatives = True
+#
+#        if doCheckMobAlternatives:
+#            actionTaken = self.bestMobilityChoice(earth, persGetInfoList)
+#            self.calculateConsequences(earth.market)
+#            util = self.evalUtility(earth, actionTaken)
+#            #self.evalExpectedUtility(earth, [True] * len(self.adults))
+#
+#        self.computeTime += time.time() - tt
 
 #TODO Check if reporter class is still useful
 class Reporter(Household):

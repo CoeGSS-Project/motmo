@@ -52,10 +52,6 @@ mpiRank = core.mpiRank
 mpiSize = core.mpiSize
 
 
-
-
-
-
 if not socket.gethostname() in ['gcf-VirtualBox', 'ThinkStation-D30']:
     plt.use('Agg')
 ###### Enums ################
@@ -424,8 +420,8 @@ def householdSetup(earth, calibration=False):
                     continue    #skip kids
                 prefTuple = opinion.getPref(ages[iPers], genders[iPers], nKids, nPers, income, parameters['radicality'])
 
-                
                 assert len(nJourneysPerPerson[iPers]) == 5##OPTPRODUCTION
+                
                 pers = Person(earth,
                               preferences = np.asarray(prefTuple),
                               hhID        = hhID,
@@ -442,6 +438,7 @@ def householdSetup(earth, calibration=False):
                               hhType      = hhType,
                               emissions   = 0.)
                 
+                pers.initMobMeme()
                 pers.imitation = np.random.randint(parameters['nMobTypes'])
                 pers.register(earth, parentEntity=hh, liTypeID=CON_HP)
                 
@@ -461,7 +458,7 @@ def householdSetup(earth, calibration=False):
         earth.papi.transferGhostAgents(earth)
 
         
-    for hh in earth.getAgents.byType(HH, ghosts = False):                  ##OPTPRODUCTION
+    for hh in earth.getAgentsByType(HH, ghosts = False):                  ##OPTPRODUCTION
         assert len(hh.adults) == hh['hhSize'] - hh['nKids']  ##OPTPRODUCTION
         
     core.mpiBarrier()
@@ -888,7 +885,7 @@ def initLinkOutput(earth):
 def initCacheArrays(earth):
     
     maxFriends = earth.para['maxFriends']
-    persZero = earth.getAgents.byType(PERS)[0]
+    persZero = earth.getAgentsByType(PERS)[0]
     
     nUtil = persZero['commUtil'].shape[0]
     Person.cacheCommUtil = np.zeros([maxFriends+1, nUtil])
@@ -946,25 +943,26 @@ def runModel(earth, parameters):
     
     #%% Initial actions
     tt = time.time()
+    
+    for cell in earth.random.shuffleAgentsOfType(CELL):
+        cell.step(earth.para, earth.market.getCurrentMaturity())
+        
+    earth.market.initPrices()
+    for good in list(earth.market.goods.values()):
+        good.initMaturity()
+        good.updateEmissionsAndMaturity(earth.market)
+        #good.updateMaturity()    
+    lg.info('Initial market step done')
+    
     for household in earth.random.shuffleAgentsOfType(HH):
 
-        household.takeActions(earth, household.adults, np.random.randint(0, earth.market.getNMobTypes(), len(household.adults)))
+        household.takeInitialActions(earth, household.adults)
         for adult in household.adults:
             adult.attr['lastAction'] =  np.int(np.random.rand() * np.float(earth.para['mobNewPeriod']))
 
     lg.info('Initial actions done')
 
-    for cell in earth.random.shuffleAgentsOfType(CELL):
-        cell.step(earth.para, earth.market.getCurrentMaturity())
-     
-    
-    earth.market.initPrices()
-    for good in list(earth.market.goods.values()):
-        good.initMaturity()
-        good.updateEmissionsAndMaturity(earth.market)
-        #good.updateMaturity()
-    
-    lg.info('Initial market step done')
+
 
     for household in earth.random.shuffleAgentsOfType(HH):
         household.calculateConsequences(earth.market)

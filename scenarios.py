@@ -366,8 +366,8 @@ def scenarioGer(parameterInput, dirPath):
     setup.omniscientBurnIn = 10  # no. of first steps of burn-in phase with omniscient agents, max. =burnIn
 
 
-    setup.AgentsUpperLimit = 1000000
-    setup.LinksUpperLimit  = 5000000
+    setup.AgentsUpperLimit = 10000000
+    setup.LinksUpperLimit  = 50000000
     
     # spatial
     setup.isSpatial = True
@@ -381,10 +381,10 @@ def scenarioGer(parameterInput, dirPath):
     # setup.landLayer[np.isnan(setup.landLayer)] = 0
     if mpiSize > 1:
         setup.landLayer = np.load(setup.resourcePath + 'partition_map_' + str(mpiSize) + '.npy')
+        setup.landLayer = ((setup.landLayer !=0) & (~np.isnan(setup.landLayer))).astype(int) 
     else:
         setup.landLayer = np.load(setup.resourcePath + 'land_layer_186x219.npy')
-        setup.landLayer[setup.landLayer == 0] = np.nan
-        setup.landLayer = setup.landLayer * 0
+        setup.landLayer =  ((setup.landLayer !=0) & (~np.isnan(setup.landLayer))).astype(int) 
 
     lg.info('max rank:' + str(np.nanmax(setup.landLayer)))
 
@@ -397,6 +397,8 @@ def scenarioGer(parameterInput, dirPath):
 
     setup.regionIDList = np.unique(
         setup.regionIdRaster[~np.isnan(setup.regionIdRaster)]).astype(int)
+
+    setup.cityPopSize = np.load(setup.resourcePath + 'cityPopulation_186x219.npy')
 
     setup.cellSizeMap = np.load(setup.resourcePath + 'cell_area_186x219.npy')
 
@@ -432,7 +434,7 @@ def scenarioGer(parameterInput, dirPath):
             pass
     print(setup.landLayer.shape)
     print(setup.population.shape)    
-    setup.landLayer[np.isnan(setup.population)] = np.nan
+    setup.landLayer[np.isnan(setup.population)] = 0
 
 
     # social

@@ -109,7 +109,7 @@ def assess_km_share_age(earth, doPlot=False):
             plt.xticks([])
             plt.ylim([0,1])
         plt.xticks(list(ageFilterDict.keys()), earth.calShareAge.index,  rotation=10)
-
+        plt.legend(['calibraton data', 'simulation data', 'error'])
 #plt.bar([x-.25 for x in catDict.keys()], earth.calShareHHTye[:,mobID],width=.5, color='g')
 #            plt.bar(catDict.keys(),simulationDf[:,ii],width=.5, color='b')
 #            
@@ -133,7 +133,7 @@ def assess_km_share_hh_type(earth, doPlot=True):
     
     if not hasattr(earth, 'calShareHHTye'):
         #read  he calibration data and save it to the world
-        dfcalShareHHTye = pd.read_csv( 'resources/calData_household type_sum_kms_2008.csv', index_col=1, header=1)
+        dfcalShareHHTye = pd.read_csv( 'resources/calData_household_type_sum_kms_2008.csv', index_col=1, header=1)
         earth.calShareHHTye = dfcalShareHHTye.drop('hhtyp',axis=1).values
     
     # vector of assumed mean distances per trip
@@ -200,6 +200,7 @@ def assess_km_share_hh_type(earth, doPlot=True):
             plt.xticks([])
             plt.ylim([0,1])
         plt.xticks(list(catDict.keys()), list(catDict.values()),  rotation=30)
+        plt.legend(['calibraton data', 'simulation data', 'error'])
         
     return errorDf, earth.calShareHHTye, simulationDf, weightOfCat
 
@@ -212,7 +213,7 @@ def assess_km_share_income(earth, doPlot=False):
     mobTypeIDs = [0, 2, 4]
     if not hasattr(earth, 'calShareIncome'):
         #dfShareAge = pd.read_csv( 'resources/calData_age_km_share_2008.csv', index_col=1, header=1)
-        dfShareIncome = pd.read_csv( 'resources/calData_income_km_share_2008_new.csv', index_col=[0,1], header=0)
+        dfShareIncome = pd.read_csv( 'resources/calData_income_km_share_2008.csv', index_col=[0,1], header=0)
         earth.calShareIncome = dfShareIncome
     
     # ordered dictionary for income categories
@@ -222,11 +223,11 @@ def assess_km_share_income(earth, doPlot=False):
     
     # fitler dictionary to use with the earth filer function
     incomeFilter = OrderedDict([
-            (1 , lambda a : (a<500)),
-            (2 , lambda a : (a>=500) & (a < 2000)),
-            (3 , lambda a : (a>=2000) & (a < 4000)),
-            (4 , lambda a : (a>=4000) & (a < 6000)),
-            (5 , lambda a : (a>=6000))])
+            (1 , lambda a : (a<900)),
+            (2 , lambda a : (a>=900) & (a < 3000)),
+            (3 , lambda a : (a>=3000) & (a < 5000)),
+            (4 , lambda a : (a>5000) & (a < 7000)),
+            (5 , lambda a : (a>=7000))])
 
     # vector of assumed mean distances per trip
     # trips categories are 
@@ -279,8 +280,8 @@ def assess_km_share_income(earth, doPlot=False):
             plt.ylim([0,1])
             plt.xticks([])
             calMobID += 1
-        plt.xticks(list(catDict.keys()), earth.calShareIncome.index,  rotation=10)
-
+        plt.xticks(list(catDict.keys()), [x[0] for x in earth.calShareIncome.index],  rotation=10)
+        plt.legend(['calibraton data', 'simulation data', 'error'])
         
    
     
@@ -308,24 +309,26 @@ def assess_km_share_county(earth, doPlot=True):
         earth.calShareCounty = dfShareCounty
 
     regionMapping = OrderedDict([
-#            (0, lambda a : a['regionId']==942), 	#Schleswig-Holstein
+            (0, lambda a : a['regionId']==942), 	#Schleswig-Holstein
             (1 , lambda a : a['regionId']==1520), #hamburg
             (2 , lambda a : a['regionId']==6321), #Niedersachsen
-            (3 , lambda a : a['regionId']==1518)]) #bremen
-#            (4, lambda a : a['regionId']==1515),	#Nordrhein-Westfalen
-#            (5, lambda a : a['regionId']==1517),	#Hessen
-#            (6, lambda a : a['regionId']==2331),	#Rheinland-Pfalz
-#            (7, lambda a : a['regionId']==1516),	#Baden-Wuerttemberg
-#            (8, lambda a : a['regionId']==2333),	#Bayern
-#            (9, lambda a : a['regionId']==2332),	#Saarland
-#            (10, lambda a : a['regionId']==2334),	#Berlin
-#            (11, lambda a : a['regionId']==3562),	#Brandenburg
-#            (12, lambda a : a['regionId']==3312),	#Mecklenburg-Vorpommern
-#            (13, lambda a : a['regionId']==2336),	#Sachsen
-#            (14, lambda a : a['regionId']==2335),   #Sachsen-Anhalt
-#            (15, lambda a : a['regionId']==1519)])	#Thueringen
+            (3 , lambda a : a['regionId']==1518), #bremen
+            (4, lambda a : a['regionId']==1515),	#Nordrhein-Westfalen
+            (5, lambda a : a['regionId']==1517),	#Hessen
+            (6, lambda a : a['regionId']==2331),	#Rheinland-Pfalz
+            (7, lambda a : a['regionId']==1516),	#Baden-Wuerttemberg
+            (8, lambda a : a['regionId']==2333),	#Bayern
+            (9, lambda a : a['regionId']==2332),	#Saarland
+            (10, lambda a : a['regionId']==2334),	#Berlin
+            (11, lambda a : a['regionId']==3562),	#Brandenburg
+            (12, lambda a : a['regionId']==3312),	#Mecklenburg-Vorpommern
+            (13, lambda a : a['regionId']==2336),	#Sachsen
+            (14, lambda a : a['regionId']==2335),   #Sachsen-Anhalt
+            (15, lambda a : a['regionId']==1519)])	#Thueringen
 
-
+    for cat in list(regionMapping.keys()):
+        if earth.countAgents(regionMapping[cat],en.CELL) == 0:
+            del regionMapping[cat]
     
     errorDf = pd.DataFrame([], columns=[enums['mobilityTypes'][x] for x in mobTypeIDs])
     simulationDf = pd.DataFrame([], columns=[enums['mobilityTypes'][x] for x in mobTypeIDs])
@@ -378,9 +381,9 @@ def assess_km_share_county(earth, doPlot=True):
             plt.ylabel(mobDict[mobID])
             plt.ylim([0,1])
             
-            plt.xticks([])
-        plt.xticks(np.arange(1,4), countyStr,  rotation=10)
-       
+            #plt.xticks([])
+        plt.xticks(np.arange(0,len(earth.calShareCounty)), countyStr,  rotation=20)
+        plt.legend(['calibraton data', 'simulation data', 'error'])
     return errorDf, earth.calShareCounty, simulationDf, weightOfCat 
 
 def assess_km_share_density(earth, doPlot=False):
@@ -471,8 +474,8 @@ def assess_km_share_density(earth, doPlot=False):
             plt.ylim([0,1])
             
             plt.xticks([])
-        plt.xticks(np.arange(0,5), densityStr,  rotation=15)
-
+        plt.xticks(np.arange(0,6), densityStr,  rotation=15)
+        plt.legend(['calibraton data', 'simulation data', 'error'])
     
     return errorDf, earth.calShareDensity, simulationDf, weightOfCat  
 

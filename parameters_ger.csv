@@ -1,14 +1,14 @@
 name,value,doSweep,minRange,maxRange,comment
 scenario,6,,,,"# selection of the scenario setup"
 nSteps,460,,,,"# number of simulation steps"
-burnIn,100,,,,"# number of burn in time steps"
+burnIn,50,,,,"# number of burn in time steps"
 ioSteps,12,,,,"#number of steps after when the IO writen to file"
 burnInTimeFactor,1,,,,"# time factor that increases time speed in"
 omniscientBurnIn,0,,,,"# number of omiscient agent time steps"
 utilObsError,50,,,,"# observation error to compare utilities"
 mobNewPeriod,60,,,,"# period within a choice is new and not challenged"
 randomCarPropDeviationSTD,0.01,,,,"# individual random deviation of car properities"
-reductionFactor,50,,,,"# population reduction factor"
+reductionFactor,400,,,,"# population reduction factor"
 "################## Prioritiy generation #################",,,,,
 individualPrio,0.33,0,,,"# individual random component of priorities"
 charIncome,5000,1,2000,7000,"# [100 5000]"

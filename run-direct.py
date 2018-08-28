@@ -69,8 +69,8 @@ parameters['stopAt2008'] = stopAt2008
 earth = init.initEarth(simNo,
                        outputPath,
                        parameters,
-                       maxNodes=100000,
-                       maxLinks=5000000,
+                       maxNodes=10000000,
+                       maxLinks=500000000,
                        debug=debug,
                        mpiComm=comm)
 

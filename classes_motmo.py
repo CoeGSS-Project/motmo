@@ -473,6 +473,7 @@ class Earth(World):
         This step funtion does not procceed time, but is only used to change to an
         other equilibrium after internal changes.
         """
+        tt = time.time()
         ###### Cell loop ######
         #ttCell = time.time()
         for cell in self.random.shuffleAgentsOfType(CELL):
@@ -492,6 +493,7 @@ class Earth(World):
         redFactor = self.para['reductionFactor']
         currStock = [good.currStock*redFactor for good in self.market.goods.values()]
         print(' Current global stock: ' + str(currStock))
+        print('Fake step ' + str(self.time) + ' done in ' + "{:2.4f}".format((time.time()-tt)) + ' s --', end='')
         return currStock
 # ToDo
 class Good():
@@ -1223,7 +1225,7 @@ class Infrastructure():
 
 # %% --- entity classes ---
 class Person(Agent, Parallel):
-    commUtulCachArray = None
+    
     __slots__ = ['loc', 'hh']
     
     def __init__(self, world, **kwProperties):
@@ -2457,7 +2459,7 @@ class Opinion():
         elif income > 2 * self.minIncomeEco:
             if random.random() > 0.8:
                 ce+=4.
-
+        ce += cityPopSize / 1e6
 
         ce = float(ce)**2
 
@@ -2468,8 +2470,10 @@ class Opinion():
         if sex == 1:
             cc +=1
         cc += 2* float(age)/self.charAge
-#        cc += (18 - ageYoungestKid) / 5
         
+#        if ageYoungestKid > -1:
+#            cc += (18 - ageYoungestKid) / 5
+#        
 #        if age > 60: 
         #cc += np.sum([x*y for x,y in zip(nJourneys, gl.MEAN_KM_PER_TRIP)]) / 2000.
         

@@ -111,7 +111,7 @@ def mobilitySetup(earth):
         conv = pa['minConvG'] + \
         (pa['maxConvGInit']-pa['minConvG']) * \
         (1 - kappa)  * math.exp( - (density - pa['muConvGInit'])**2 / (2 * pa['sigmaConvGInit']**2)) +  \
-        (pa['maxConvG'] - pa['minConvG']) * kappa * (np.exp(-(density - pa['muConvG'])**2 / (2 * pa['sigmaConvB']**2)))
+        (pa['maxConvG'] - pa['minConvG']) * kappa * (math.exp(-(density - pa['muConvG'])**2 / (2 * pa['sigmaConvB']**2)))
         
         
         return conv
@@ -392,7 +392,7 @@ def householdSetup(earth, calibration=False):
             if nKids > 0:
                 ageYoungestKid = min(ages)
             else:
-                ageYoungestKid = 18
+                ageYoungestKid = -1
             
             if nAdults == 0:
                 currIdx[regionIdx]  += nPers
@@ -478,9 +478,10 @@ def householdSetup(earth, calibration=False):
                               consequences= np.asarray([0.]*len(prefTuple)),
                               lastAction  = 0,
                               hhType      = hhType,
-                              emissions   = 0.)
+                              emissions   = 0.,
+                              ageYoungestKid = ageYoungestKid)
                 # remove after calibration
-                pers.ageYoungestKid = ageYoungestKid
+                
                 pers.imitation = np.random.randint(parameters['nMobTypes'])
                 pers.register(earth, parentEntity=hh, liTypeID=CON_HP)
                 
@@ -611,7 +612,7 @@ def initScenario(earth, parameters):
             3562: 'Brandenburg',
             3312: 'Mecklenburg-Vorpommern',
             2336: 'Sachsen',
-            335: 'Sachsen-Anhalt',
+            2335: 'Sachsen-Anhalt',
             1519: 'Thueringen'}
 
     initTypes(earth)
@@ -688,6 +689,7 @@ def initTypes(earth):
                                                    ('commUtil', np.float64, 5), # comunity utility
                                                    ('selfUtil', np.float64, 5), # own utility at time of action
                                                    ('mobType', np.int8, 1),
+                                                   ('ageYoungestKid', np.int8,1),
                                                    ('prop', np.float64, 3),
                                                    ('consequences', np.float64, 4),
                                                    ('lastAction', np.int16, 1),
@@ -766,6 +768,12 @@ def initInfrastructure(earth):
 
 #%% cell convenience test
 def cellTest(earth):
+    
+    colorPal =  [(0.9964936564950382, 0.9986466744366814, 0.7025759500615737),
+                 (0.5529412031173706, 0.8274509906768799, 0.7803921699523926),
+                 (0.7490965163006502, 0.7336563019191518, 0.8525028922978569),
+                 (0.9786851223777322, 0.5073126014541177, 0.45665513592607837),
+                 (0.5077278263428631, 0.694256073587081, 0.8222376111675712)]
     #%%
     for good in list(earth.market.goods.values()):
         
@@ -779,7 +787,7 @@ def cellTest(earth):
     eConvArray = earth.para['landLayer'] * 0
     convMaps  = np.zeros([earth.market.getNMobTypes(), *earth.para['landLayer'].shape])
     convMaps = convMaps * np.nan
-    #import tqdm
+    popDensityArray = earth.para['landLayer'] * 0
     if earth.para['showFigures']:
         for i, cell in enumerate(earth.random.shuffleAgentsOfType(CELL)):        
             #tt = time.time()
@@ -789,6 +797,7 @@ def cellTest(earth):
             coord = tuple(cell.attr['coord'])
             convMaps[:, coord[0], coord[1]] = convAll
             popArray[i] = popDensity
+            popDensityArray[(coord[0], coord[1])] = popDensity
             try:
                 eConvArray[tuple(cell.attr['coord'])] = convAll[1]
             except:
@@ -845,17 +854,19 @@ def cellTest(earth):
         #%% region plots
         reIdArray  = earth.para['regionIdRaster']
         reIdList   = earth.para['regionIDList']
-        popDensity = earth.para['popDensity']
+        popDensity #= earth.para['popDensity']
         
-        
+        enumRegions = earth.getEnums()['regions']
         for reID in reIdList:
-            plt.figure(str(reID))
-            cellDensities = popDensity[reIdArray == reID]
-            height, xPos = np.histogram(cellDensities, bins=20, range=[0,3000])
-            plt.bar(xPos[:-1] + np.diff(xPos)/2, -height / sum(height), width=np.diff(xPos))
+            plt.figure(enumRegions[reID])
+            cellDensities = popDensityArray[reIdArray == reID]
+            height, xPos = np.histogram(cellDensities, bins=20, range=[0,4000])
+            plt.bar(xPos[:-1], -height / sum(height), width=np.diff(xPos))
             for i in range(earth.market.getNMobTypes()):
-                plt.scatter(popArray,convArray[i,:], s=2)
-            
+                plt.scatter(popArray,convArray[i,:], s=10, c=colorPal[i], linewidths=0)
+            plt.tight_layout()
+            plt.xlim([0,4100])
+            #plt.savefig('phase_one_calibration/convenience' + enumRegions[reID] + '.png')
         adsf
         
 # %% Generate Network

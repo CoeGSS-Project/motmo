@@ -57,8 +57,8 @@ en = core.enum # global enumeratons
 gl = core.glVar # global variables
 
 
-if not socket.gethostname() in ['gcf-VirtualBox', 'ThinkStation-D30']:
-    plt.use('Agg')
+#if not socket.gethostname() in ['gcf-VirtualBox', 'ThinkStation-D30']:
+#    plt.use('Agg')
 ###### Enums ################
 #connections
 CON_CC = 1 # loc - loc
@@ -88,9 +88,59 @@ en.HH     = 2
 en.PERS   = 3
 
 
+#%% comvenience Functions
 
-
-
+#def convenienceBrown(density, pa, kappa, cell):
+#    
+#    conv = pa['minConvB'] +\
+#    kappa * (pa['maxConvB'] - pa['minConvB']) * \
+#    math.exp( - (density - pa['muConvB'])**2 / (2 * pa['sigmaConvB']**2))
+#    return conv
+#
+##    @njit
+#def convenienceGreen(density, pa, kappa, cell):
+#    minValue = (1 - kappa) * pa['minConvGInit'] + kappa * pa['minConvG']
+#    maxValue = (1 - kappa) * pa['maxConvGInit'] + kappa * pa['maxConvG']
+#    
+#    delta    = kappa * (maxValue - minValue)
+#    sigma = (1 - kappa) * pa['sigmaConvGInit'] + kappa * pa['sigmaConvG']
+#    mu    = (1 - kappa) * pa['muConvGInit'] + kappa * pa['muConvG']
+#    
+#    conv = minValue + delta * math.exp(-(density - mu)**2 / (2 * sigma**2))
+#    
+#    return conv
+#
+##    @njit
+#def conveniencePublicLeuphana(density, pa, kappa, cell):
+#    
+#    currKappa   = (1 - kappa) * pa['maxConvGInit'] + kappa * pa['maxConvG']
+#    return pa['conveniencePublic'][cell._node['coord']] * currKappa
+#
+##    @njit
+#def conveniencePublic(density, pa, kappa, cell):
+#    conv = pa['minConvP'] + \
+#            ((pa['maxConvP'] - pa['minConvP']) * (kappa)) * \
+#            math.exp(-(density - pa['muConvP'])**2 / (2 * ((1 - kappa) * \
+#            pa['sigmaConvPInit'] + (kappa * pa['sigmaConvP']))**2))
+#    
+#    return conv
+#
+##    @njit
+#def convenienceShared(density, pa, kappa, cell):
+#    
+#    conv = (kappa/10.) + pa['minConvS'] + (kappa *(pa['maxConvS'] - pa['minConvS'] - (kappa/10.))  +\
+#                ((1-kappa)* (pa['maxConvSInit'] - pa['minConvS'] - (kappa/10.)))) * \
+#                math.exp( - (density - pa['muConvS'])**2 / (2 * ((1-kappa) * \
+#                pa['sigmaConvSInit'] + (kappa * pa['sigmaConvS']))**2) )        
+#    return conv
+#  
+##    @njit
+#def convenienceNone(density, pa, kappa, cell):
+#    conv = pa['minConvN'] + \
+#            ((pa['maxConvN'] - pa['minConvN']) * (kappa)) * \
+#            math.exp(-(density - pa['muConvN'])**2 / (2 * ((1 - kappa) * \
+#            pa['sigmaConvNInit'] + (kappa * pa['sigmaConvN']))**2))        
+#    return conv
 
 # Mobility setup setup
 def mobilitySetup(earth):
@@ -98,56 +148,13 @@ def mobilitySetup(earth):
 
     # define convenience functions
 #    @njit
-    def convenienceBrown(density, pa, kappa, cell):
-        
-        conv = pa['minConvB'] +\
-        kappa * (pa['maxConvB'] - pa['minConvB']) * \
-        math.exp( - (density - pa['muConvB'])**2 / (2 * pa['sigmaConvB']**2))
-        return conv
-    
-#    @njit
-    def convenienceGreen(density, pa, kappa, cell):
-        
-        conv = pa['minConvG'] + \
-        (pa['maxConvGInit']-pa['minConvG']) * \
-        (1 - kappa)  * math.exp( - (density - pa['muConvGInit'])**2 / (2 * pa['sigmaConvGInit']**2)) +  \
-        (pa['maxConvG'] - pa['minConvG']) * kappa * (math.exp(-(density - pa['muConvG'])**2 / (2 * pa['sigmaConvB']**2)))
-        
-        
-        return conv
 
-#    @njit
-    def conveniencePublicLeuphana(density, pa, kappa, cell):
-        
-        currKappa   = (1 - kappa) * pa['maxConvGInit'] + kappa * pa['maxConvG']
-        return pa['conveniencePublic'][cell._node['coord']] * currKappa
-
-#    @njit
-    def conveniencePublic(density, pa, kappa, cell):
-        conv = pa['minConvP'] + \
-                ((pa['maxConvP'] - pa['minConvP']) * (kappa)) * \
-                math.exp(-(density - pa['muConvP'])**2 / (2 * ((1 - kappa) * \
-                pa['sigmaConvPInit'] + (kappa * pa['sigmaConvP']))**2))
-        
-        return conv
-    
-#    @njit
-    def convenienceShared(density, pa, kappa, cell):
-        
-        conv = (kappa/10.) + pa['minConvS'] + (kappa *(pa['maxConvS'] - pa['minConvS'] - (kappa/10.))  +\
-                    ((1-kappa)* (pa['maxConvSInit'] - pa['minConvS'] - (kappa/10.)))) * \
-                    math.exp( - (density - pa['muConvS'])**2 / (2 * ((1-kappa) * \
-                    pa['sigmaConvSInit'] + (kappa * pa['sigmaConvS']))**2) )        
-        return conv
-      
-#    @njit
-    def convenienceNone(density, pa, kappa, cell):
-        conv = pa['minConvN'] + \
-                ((pa['maxConvN'] - pa['minConvN']) * (kappa)) * \
-                math.exp(-(density - pa['muConvN'])**2 / (2 * ((1 - kappa) * \
-                pa['sigmaConvNInit'] + (kappa * pa['sigmaConvN']))**2))        
-        return conv
-
+    def parameter2Dict(parameters, mobStr):
+        convDict = OrderedDict()
+        for kind in ['min','max', 'mu', 'sigma']:
+            for timePhase in ['Init', 'Final']:
+                convDict[kind+timePhase]      = parameters[kind+mobStr+timePhase] 
+        return convDict
 
     from collections import OrderedDict
     
@@ -157,9 +164,11 @@ def mobilitySetup(earth):
     propDict['fixedCosts']     = parameters['initPriceBrown']
     propDict['operatingCosts'] = parameters['initOperatingCostsBrown']
     
-    earth.registerGood('brown',                                # name
+    convDict = parameter2Dict(parameters, 'Brown')
+   
+    earth.market.registerGood('brown',                                # name
                     propDict,                                  # (emissions, TCO)
-                    convenienceBrown,                          # convenience function
+                    convDict,                                 # convenience dict
                     'start',                                   # time step of introduction in simulation
                     initExperience = parameters['techExpBrown'], # initial experience
                     priceRed = parameters['priceReductionB'],  # exponent for price reduction through learning by doing
@@ -173,10 +182,13 @@ def mobilitySetup(earth):
     propDict['emissions']      = parameters['initEmGreen'] 
     propDict['fixedCosts']     = parameters['initPriceGreen']
     propDict['operatingCosts'] = parameters['initOperatingCostsGreen']    
-  
-    earth.registerGood('green',                                #name
+    
+    convDict = parameter2Dict(parameters, 'Green')
+
+            
+    earth.market.registerGood('green',                                #name
                     propDict,                                  # (emissions, TCO)
-                    convenienceGreen,                          # convenience function
+                    convDict,                          # convenience function
                     'start',
                     initExperience = parameters['techExpGreen'],                # initial experience
                     priceRed = parameters['priceReductionG'],  # exponent for price reduction through learning by doing
@@ -187,17 +199,15 @@ def mobilitySetup(earth):
 
     # register public:
     propDict = OrderedDict()
-    if parameters['scenario'] == 2:
-        convFuncPublic = conveniencePublicLeuphana
-    else:
-        convFuncPublic = conveniencePublic
     propDict['emissions']      = parameters['initEmPublic'] 
     propDict['fixedCosts']     = parameters['initPricePublic']
     propDict['operatingCosts'] = parameters['initOperatingCostsPublic']
  
-    earth.registerGood('public',  #name
+    
+    convDict = parameter2Dict(parameters, 'Public')
+    earth.market.registerGood('public',  #name
                     propDict,   #(emissions, TCO)
-                    convFuncPublic,
+                    convDict,
                     'start',
                     initExperience = parameters['techExpPublic'],
                     pt2030  = parameters['pt2030'],          # emissions 2030 (compared to 2012)
@@ -210,9 +220,11 @@ def mobilitySetup(earth):
     propDict['fixedCosts']     = parameters['initPriceShared']
     propDict['operatingCosts'] = parameters['initOperatingCostsShared']
    
-    earth.registerGood('shared', # name
+    convDict = parameter2Dict(parameters, 'Shared')
+    
+    earth.market.registerGood('shared', # name
                     propDict,    # (emissions, TCO)
-                    convenienceShared,
+                    convDict,
                     'start',
                     initExperience = parameters['techExpShared'],
                     weight = parameters['weightS'],           # average weight
@@ -223,15 +235,17 @@ def mobilitySetup(earth):
     propDict['fixedCosts']     = parameters['initPriceNone']
     propDict['operatingCosts'] = parameters['initOperatingCostsNone']
 
-    earth.registerGood('none',  #name
+    convDict = parameter2Dict(parameters, 'None')
+    
+    earth.market.registerGood('none',  #name
                     propDict,   #(emissions, TCO)
-                    convenienceNone,
+                    convDict,
                     'start',
                     initExperience = parameters['techExpNone'],
                     initMaturity = parameters['initMaturityN']) # initital maturity
     
 
-    earth.setParameter('nMobTypes', len(earth.getEnums()['brands']))
+    earth.setParameter('nMobTypes', len(earth.getEnums()['mobilityTypes']))
     return earth
     ##############################################################################
 
@@ -250,6 +264,7 @@ def createAndReadParameters(fileName, dirPath):
     parameters = core.AttrDict()
     # reading of gerneral parameters
     parameters = readParameterFile(parameters, 'parameters_all.csv')
+    parameters = readParameterFile(parameters, 'parameters_convenience.csv')
     # reading of scenario-specific parameters
     parameters = readParameterFile(parameters, fileName)
 
@@ -708,6 +723,25 @@ def initTypes(earth):
 
     return CELL, HH, PERS
 
+
+def populationMapPreProcessing(parameters):
+    convMat = np.asarray([[0., 1, 0.],[1., 1., 1.],[0., 1., 0.]])
+    tmp = parameters['population']*parameters['reductionFactor']
+    tmp[np.isnan(tmp)] = 0
+    smoothedPopulation = signal.convolve2d(tmp,convMat,boundary='symm',mode='same')
+    tmp = parameters['cellSizeMap']
+    tmp[np.isnan(tmp)] = 0
+    smoothedCellSize   = signal.convolve2d(tmp,convMat,boundary='symm',mode='same')
+
+    
+    popDensity = np.divide(smoothedPopulation, 
+                           smoothedCellSize, 
+                           out=np.zeros_like(smoothedPopulation), 
+                           where=smoothedCellSize!=0)
+    popDensity[popDensity>4000.]  = 4000.
+    return popDensity
+    
+    
 def initSpatialLayer(earth):
     earth.registerGrid(CELL, CON_CC)
     tt = time.time()
@@ -724,21 +758,9 @@ def initSpatialLayer(earth):
         earth.grid.init((parameters['landLayer']),
                                connList, 
                                LocClassObject=Cell)
-    convMat = np.asarray([[0., 1, 0.],[1., 1., 1.],[0., 1., 0.]])
-    tmp = parameters['population']*parameters['reductionFactor']
-    tmp[np.isnan(tmp)] = 0
-    smoothedPopulation = signal.convolve2d(tmp,convMat,boundary='symm',mode='same')
-    tmp = parameters['cellSizeMap']
-    tmp[np.isnan(tmp)] = 0
-    smoothedCellSize   = signal.convolve2d(tmp,convMat,boundary='symm',mode='same')
-
     
-    popDensity = np.divide(smoothedPopulation, 
-                           smoothedCellSize, 
-                           out=np.zeros_like(smoothedPopulation), 
-                           where=smoothedCellSize!=0)
-    popDensity[popDensity>4000.]  = 4000.
-    earth.para['popDensity'] = popDensity
+    earth.para['popDensity'] = populationMapPreProcessing(earth.para)
+    
    
     if 'regionIdRaster' in list(parameters.keys()):
 
@@ -748,7 +770,7 @@ def initSpatialLayer(earth):
             cell.attr['emissions'] = np.zeros(len(earth.getEnums()['mobilityTypes']))
             cell.attr['electricConsumption'] = 0.
             cell.cellSize = parameters['cellSizeMap'][tuple(cell.attr['coord'])]
-            cell.attr['popDensity'] = popDensity[tuple(cell.attr['coord'])]
+            cell.attr['popDensity'] = earth.para['popDensity'][tuple(cell.attr['coord'])]
             cell.attr['cityPopSize'] = parameters['cityPopSize'][tuple(cell.attr['coord'])]
             
     if earth.isParallel:        
@@ -1072,9 +1094,9 @@ def runModel(earth, parameters):
             adult.attr['lastAction'] =  np.int(np.random.rand() * np.float(earth.para['mobNewPeriod']))
 
     lg.info('Initial actions done')
-
+    convParaList = [good.convenienceParameter for good in earth.market.goods.values()]
     for cell in earth.random.shuffleAgentsOfType(CELL):
-        cell.step(earth.para, earth.market.getCurrentMaturity())
+        cell.step(earth.para, convParaList)
      
     
     earth.market.initPrices()

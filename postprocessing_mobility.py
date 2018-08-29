@@ -127,6 +127,7 @@ WITHOUTBURNIN = WITHOUTBURNIN
 IO_STEPS = NSTEPS//STEP_DELTA
 IO_BURN_IN = N_BURN_IN//STEP_DELTA
 IO_YEAR_STEP = 12 // STEP_DELTA
+
 #%% DATA LOADING FILES
 print('omniscient Agents: ' + str(simParas['omniscientAgents']))
 print('burn-in phase: ' + str(N_BURN_IN))

@@ -116,6 +116,9 @@ def normalizedGaussian(array, center, errStd):
     normDiff = np.exp(-(diff**2.) / (2.* errStd**2.))  
     return normDiff / np.sum(normDiff)
 
+@njit(cache=True)
+def convenienceFunction(minValue, maxValue, delta, mu, twoSigmaSquare, density):
+    return  minValue + delta * math.exp(-(density - mu)**2 / twoSigmaSquare)
 
 class Earth(World):
 
@@ -181,28 +184,6 @@ class Earth(World):
     def initChargInfrastructure(self):
         self.chargingInfra = Infrastructure(self, self.para['roadKmPerCell'], 2.0, 4.0, 5.0)
     
-    def registerGood(self, label, propDict, convFunction, initTimeStep, **kwProperties):
-        """
-        Method to register a new good (i.e. mobility type) in the Earth and therefore in the market.
-        It currently adds the related convenience function in the cells.
-        """
-        goodID = self.market.initGood(initTimeStep, label, propDict, **kwProperties)
-
-        # TODO: move convenience Function from a instance variable to a class variable            
-        for cell in self.random.shuffleAgentsOfType(CELL):
-            cell.convFunctions.append(convFunction)
-
-        if 'brands' not in list(self.getEnums().keys()):
-            self.getEnums()['brands'] = {}
-        self.getEnums()['brands'][goodID] = label
-
-        # adding a record about the properties of each goood
-        self.registerRecord('prop_' + label,
-                            'properties of ' + label,
-                            list(self.getEnums()['properties'].values()), 
-                            style='plot')
-
-
     def generateSocialNetwork(self, agTypeID, liTypeID):
         """
         Function for the generation of a simple network that regards the
@@ -391,8 +372,11 @@ class Earth(World):
         
         ###### Cell loop ######
         ttCell = time.time()
+        convParaList = list()
+        for good in self.market.goods.values():
+            convParaList.append(good.convenienceParameter)
         for cell in self.random.shuffleAgentsOfType(CELL):
-            cell.step(self.para, self.market.getCurrentMaturity())
+            cell.step(self.para, convParaList)
         lg.debug('Cell step required ' + str(time.time()- ttCell) + ' seconds')##OPTPRODUCTION
 
 
@@ -541,7 +525,7 @@ class Good():
         """
         cls.overallExperience += exp
         
-    def __init__(self, label, propDict, initExperience, **parameters):
+    def __init__(self, label, propDict, convDict, initExperience, **parameters):
         # stf: das finde ich einen recht schrägen Hack um die id zu setzen, siehe auch
         # mein Kommentar zur Liste selber
         self.goodID           = len(self.lastGlobalSales)
@@ -556,14 +540,14 @@ class Good():
         self.addToOverallExperience(initExperience)
         self.progress        = 1.
         self.maturity        = 0.0001         
-        
+        self.convDict        = convDict
         self.oldStock        = 0
         self.currLocalSales  = 0
         
         self.updateGlobalSales(self.lastGlobalSales + [0.])
         self.updateGlobalStock(self.globalStock + [1.])
         self.initEmissionFunction()
-             
+        self.updateConvenienceParameters()     
 
     def initMaturity(self):
         if (self.label == 'shared' or self.label == 'none'):
@@ -648,8 +632,6 @@ class Good():
         self.properties['emissions'] = emissions
         self.maturity = maturity
 
-#    def updateMaturity(self):
-#        self.maturity = self.getExperience() / self.overallExperience
         
     def updateTechnicalProgress(self):
         """
@@ -666,7 +648,16 @@ class Good():
             self.currGrowthRate = 0
         self.progress *= 1 + (self.lastGlobalSales[self.goodID]) / float(self.experience + self.initExperience)
         
+    def updateConvenienceParameters(self):
+        kappa = self.maturity
+        minValue = (1 - kappa) * self.convDict['minInit'] + kappa * self.convDict['minFinal']
+        maxValue = (1 - kappa) * self.convDict['maxInit'] + kappa * self.convDict['maxFinal']
         
+        delta    = kappa * (maxValue - minValue)
+        sigma = (1 - kappa) * self.convDict['sigmaInit'] + kappa * self.convDict['sigmaFinal']
+        mu    = (1 - kappa) * self.convDict['muInit'] + kappa * self.convDict['muFinal']      
+        
+        self.convenienceParameter = [minValue, maxValue, delta, mu, 2*sigma**2]
         
     def updateSales(self, production=None):
         """
@@ -701,7 +692,7 @@ class Good():
                 
         self.oldStock = self.currStock
         self.updateEmissionsAndMaturity(market)                
-                
+        self.updateConvenienceParameters()
             
         
 
@@ -792,7 +783,8 @@ class Market():
         self.glob.registerStat('meanOpC' , np.asarray([0]*len(properties)),'mean')
         self.glob.registerStat('stdOpC' , np.asarray([0]*len(properties)),'std')
         
-
+        self.registerRecord = earth.registerRecord
+        self.getEnums       = earth.getEnums
     def updateGlobalStock(self):
         globalStock = np.zeros(self.para['nMobTypes'])
         for re in self.para['regionIDList']:
@@ -1009,9 +1001,11 @@ class Market():
     def computeInnovation(self):
         self.innovation = 1 - (normalize(np.asarray(self.getCurrentExperience()))**.5)
         
-
-#    def initGood(self, label, propDict, initTimeStep, slope, initialProgress, allTimeProduced):
-    def initGood(self, initTimeStep, label, propDict, **kwProperties):
+    def registerGood(self, label, propDict, convDict, initTimeStep, **kwProperties):
+        """
+        Method to register a new good (i.e. mobility type) in the Earth and therefore in the market.
+        It currently adds the related convenience function in the cells.
+        """
         goodID = self.__nMobTypes__
         self.__nMobTypes__ +=1
         self.glob.globalValue['sales'] = np.asarray([0]*self.__nMobTypes__)
@@ -1019,8 +1013,9 @@ class Market():
         self.glob.updateLocalValues('sales', np.asarray([0]*self.__nMobTypes__))
         self.stockByMobType.append(0)
         self.mobilityTypesToInit.append(label)
-        self.goods[goodID] = Good(label, propDict, **kwProperties)
-
+        
+        self.goods[goodID] = Good(label, propDict, convDict, **kwProperties)
+        
         if initTimeStep not in list(self.mobilityInitDict.keys()):
             self.mobilityInitDict[initTimeStep] = [[label, propDict, initTimeStep, goodID]] #, allTimeProduced]]
         else:
@@ -1029,8 +1024,13 @@ class Market():
 
         self.computeInnovation()
         self.currMobProps = self.getMobProps()
-        
-        return goodID
+
+        # adding a record about the properties of each goood
+        self.registerRecord('prop_' + label,
+                            'properties of ' + label,
+                            list(self.getEnums()['properties'].values()), 
+                            style='plot')
+
 
 
     def addGood2Market(self, label, propertyDict, goodID):
@@ -2225,7 +2225,8 @@ class Cell(Location, Parallel):
         self.convFunctions = list()
         self.redFactor     = earth.para['reductionFactor']
 
-
+    def convenienceFunction(self, pa, kappa, density):
+        return  pa['minValue'] + kappa * pa['delta'] * math.exp(-(density - pa['mu'])**2 / pa['2sigmaSquare'])
 
     def getConnectedCells(self):
         """ 
@@ -2272,7 +2273,7 @@ class Cell(Location, Parallel):
         """
         #self.attr['population'] = population #/ float(world.getParameters('reductionFactor'))
 
-        convAll = self.calculateConveniences(world.getParameters(), world.market.getCurrentMaturity())
+        convAll = self.calculateConveniences(world.market, world.getParameters())
 
 #        for x in convAll:                             ##OPTPRODUCTION
 #            if np.isinf(x) or np.isnan(x) or x == 0:  ##OPTPRODUCTION
@@ -2281,7 +2282,7 @@ class Cell(Location, Parallel):
         #self.attr['population'] = 0
         return convAll, self.attr['popDensity']
 
-    def calculateConveniences(self, parameters, currentMaturity):
+    def calculateConveniences(self, convParaList, parameters):
         """
         Calculation of convenience for all goods + the electric infrastructure.
         
@@ -2295,12 +2296,13 @@ class Cell(Location, Parallel):
         convAll = list()
 
         popDensity = np.float(self.attr['popDensity'])
-        for i, funcCall in enumerate(self.convFunctions):
-            convAll.append(funcCall(popDensity, parameters, currentMaturity[i], self))
         
+        convAll = [convenienceFunction(*convParamerter, popDensity) for convParamerter in convParaList]
+            
         homeChargingConv = parameters['homeChargConv']
         #convenience of electric mobility is additionally dependen on the infrastructure
         convAll[GREEN] *= homeChargingConv + (self.electricInfrastructure() * (1.-homeChargingConv))
+
         return convAll
 
     def electricInfrastructure(self, greenMeanCars = None):
@@ -2372,14 +2374,14 @@ class Cell(Location, Parallel):
         
         self.attr['emissions'] =  emissionsCell
         
-    def step(self, parameters, currentMaturity):
+    def step(self, parameters, convParaList):
         """
         Step method for cells
         """
         #self.attr['convenience'] *= 0.
         self.attr['emissions'] *= 0.
         self.attr['electricConsumption']= 0.
-        convAll = self.calculateConveniences(parameters,currentMaturity)
+        convAll = self.calculateConveniences(convParaList, parameters)
         self.attr['convenience'][:] =  convAll
 
 

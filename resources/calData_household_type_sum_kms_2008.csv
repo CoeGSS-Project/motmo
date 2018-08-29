@@ -1,0 +1,13 @@
+,mobType,brown,green,public,shared,other
+hhtyp,class,1,2,3,4,5
+"Einpersonenhh_Person 18 bis < 30 Jahre",1,0.78,,0.17,,0.05
+"Einpersonenhh_Person 30 bis < 60 Jahre",2,0.67,,0.26,,0.08
+"Einpersonenhh_Person 60 Jahre und älter",3,0.68,,0.16,,0.16
+"HH mit zwei Erwachsenen_jüngste Person 18 bis < 30 Jahre",4,0.77,,0.18,,0.05
+"HH mit zwei Erwachsenen_jüngste Person 30 bis < 60 Jahre",5,0.79,,0.14,,0.06
+"HH mit zwei Erwachsenen_jüngste Person 60 Jahre und älter",6,0.76,,0.11,,0.13
+"HH mit drei und mehr erwachsenen Personen",7,0.78,,0.16,,0.05
+"HH mit mindestens einem Kind unter 6 Jahre",8,0.81,,0.13,,0.06
+"HH mit mindestens einem Kind unter 14 Jahre",9,0.74,,0.19,,0.07
+"HH mit mindestens einem Kind unter 18 Jahre",10,0.68,,0.25,,0.07
+Alleinerziehende,11,0.62,,0.28,,0.11

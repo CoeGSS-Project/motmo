@@ -269,7 +269,8 @@ def scenarioNBH(parameterInput, dirPath):
 
     # spatial
     setup.isSpatial = True
-
+    setup.spatialRedFactor = 8.
+     
     if hasattr(parameterInput, "reductionFactor"):
         # overwrite the standart parameter
         setup.reductionFactor = parameterInput.reductionFactor
@@ -294,7 +295,7 @@ def scenarioNBH(parameterInput, dirPath):
     setup.regionIdRaster[np.logical_xor(
         np.isnan(setup.population), np.isnan(setup.regionIdRaster))] = 6321
 
-    setup.chargStat = np.load(setup.resourcePath + 'charge_stations_62x118.npy')
+    #setup.chargStat = np.load(setup.resourcePath + 'charge_stations_62x118.npy')
 
     setup.cellSizeMap = np.load(setup.resourcePath + 'cell_area_62x118.npy')
 

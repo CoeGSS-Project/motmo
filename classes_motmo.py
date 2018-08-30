@@ -119,6 +119,9 @@ def normalizedGaussian(array, center, errStd):
 @njit(cache=True)
 def convenienceFunction(minValue, maxValue, delta, mu, twoSigmaSquare, density):
     return  minValue + delta * math.exp(-(density - mu)**2 / twoSigmaSquare)
+@njit(cache=True)
+def convenienceFunctionArray(minValue, maxValue, delta, mu, twoSigmaSquare, density):
+    return  minValue + delta * np.exp(-(density - mu)**2 / twoSigmaSquare)
 
 class Earth(World):
 
@@ -1109,13 +1112,18 @@ class Infrastructure():
                 if earth.para['scenario'] == 6:
                     nextName = earth.para['resourcePath'] + 'charge_stations_' +str(earth.date[1]+1) + '_186x219.npy'
                     currName = earth.para['resourcePath'] + 'charge_stations_' +str(earth.date[1]) + '_186x219.npy'
+                elif earth.para['scenario'] == 3:
+                    nextName = earth.para['resourcePath'] + 'charge_stations_' +str(earth.date[1]+1) + '_62x118.npy'
+                    currName = earth.para['resourcePath'] + 'charge_stations_' +str(earth.date[1]) + '_62x118.npy'
                 else:
                     nextName = earth.para['resourcePath'] + 'charge_stations_' +str(earth.date[1]+1) + '.npy'
                     currName = earth.para['resourcePath'] + 'charge_stations_' +str(earth.date[1]) + '.npy'
     
                 if os.path.isfile(nextName):
                     self.currStatMap = np.load(currName)
+                    self.currStatMap[self.currStatMap<0] = 0
                     self.nextStatMap = np.load(nextName)
+                    self.nextStatMap[self.nextStatMap<0] = 0
                 else:
                     # switch flag, so that for future steps, new stations are gernerated
                     self.mapLoaded = False
@@ -1125,7 +1133,10 @@ class Infrastructure():
                 
             nextYearfactor = (earth.date[0]-1)/12
             currStations = nextYearfactor * self.nextStatMap + (1-nextYearfactor) * self.currStatMap
-            
+            currStations[np.isnan(currStations)] = 0
+#            if min(currStations)< 0 or max(currStations )> 1e6:
+#                import pdb
+#                pdb.set_trace()
             return currStations
         else:
             return None
@@ -1138,7 +1149,7 @@ class Infrastructure():
             lg.info('New station generated for: ' + str(earth.date))
             self.growthModel(earth)
             
-        elif earth.para['scenario'] in [2,6]:
+        else:
             # scenario ger or leun
             
             if earth.papi.comm.rank == 0:
@@ -1211,7 +1222,7 @@ class Infrastructure():
             propability = propability / np.sum(propability)
             
       
-        if np.sum(np.isnan(propability)) >0:
+        if np.sum(np.isnan(propability)) > 0:
             import pdb
             pdb.set_trace()
         randIdx = np.random.choice(list(range(len(currNumStations))), int(nNewStations), p=propability)
@@ -1219,6 +1230,9 @@ class Infrastructure():
         uniqueRandIdx, count = np.unique(randIdx,return_counts=True)
         
         currNumStations[uniqueRandIdx] += count   
+        if (currNumStations < 0) or (currNumStations > 1e6):
+            import pdb
+            pdb.set_trace()
         earth.setAttrOfAgentType('chargStat', currNumStations, agTypeID=CELL)
 
     
@@ -2266,14 +2280,14 @@ class Cell(Location, Parallel):
     def getX(self, choice):
         return copy.copy(self.xCell[choice,:])
 
-    def selfTest(self, world):
+    def selfTest(self, world, convParaList):
         """
         Not used in the simulations, but for testing purposes.
         
         """
         #self.attr['population'] = population #/ float(world.getParameters('reductionFactor'))
 
-        convAll = self.calculateConveniences(world.market, world.getParameters())
+        convAll = self.calculateConveniences(convParaList, world.parameters)
 
 #        for x in convAll:                             ##OPTPRODUCTION
 #            if np.isinf(x) or np.isnan(x) or x == 0:  ##OPTPRODUCTION

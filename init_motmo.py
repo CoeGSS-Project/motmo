@@ -148,7 +148,7 @@ def mobilitySetup(earth):
 
     # define convenience functions
 #    @njit
-
+    from collections import OrderedDict
     def parameter2Dict(parameters, mobStr):
         convDict = OrderedDict()
         for kind in ['min','max', 'mu', 'sigma']:
@@ -156,7 +156,7 @@ def mobilitySetup(earth):
                 convDict[kind+timePhase]      = parameters[kind+mobStr+timePhase] 
         return convDict
 
-    from collections import OrderedDict
+    
     
     # register brown:
     propDict = OrderedDict()
@@ -797,12 +797,16 @@ def cellTest(earth):
                  (0.9786851223777322, 0.5073126014541177, 0.45665513592607837),
                  (0.5077278263428631, 0.694256073587081, 0.8222376111675712)]
     #%%
+    convParaList = list()
     for good in list(earth.market.goods.values()):
         
         good.initMaturity()
         good.emissionFunction(good, earth.market)
         good.updateEmissionsAndMaturity(earth.market)  
-        
+        convParaList.append(good.convenienceParameter)
+    
+            
+            
     nLocations = len(earth.getLocationDict())
     convArray  = np.zeros([earth.market.getNMobTypes(), nLocations])
     popArray   = np.zeros(nLocations)
@@ -813,7 +817,7 @@ def cellTest(earth):
     if earth.para['showFigures']:
         for i, cell in enumerate(earth.random.shuffleAgentsOfType(CELL)):        
             #tt = time.time()
-            convAll, popDensity = cell.selfTest(earth)
+            convAll, popDensity = cell.selfTest(earth, convParaList)
             #convAll[1] = convAll[1] * cell.electricInfrastructure(100.)
             convArray[:, i] = convAll
             coord = tuple(cell.attr['coord'])

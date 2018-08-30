@@ -389,16 +389,20 @@ class Earth(World):
         ttCell = time.time()
         for cell in self.random.shuffleAgentsOfType(CELL):
             cell.step(self.para, self.market.getCurrentMaturity())
-        lg.debug('Cell step required ' + str(time.time()- ttCell) + ' seconds')##OPTPRODUCTION
-
+            cell.attr['traffic'] = np.zeros(5)
+        lg.debug('Cell step required ' + str(time.time()- ttCell) + ' seconds') ##OPTPRODUCTION
 
 
         ###### Person loop ######
-
         for person in self.random.shuffleAgentsOfType(PERS):
             person.mobMixStep(self)
-        lg.debug('Person step required ' + str(time.time()- ttComp) + ' seconds')##OPTPRODUCTION
+        lg.debug('Person step required ' + str(time.time()- ttComp) + ' seconds') ##OPTPRODUCTION
    
+    
+        ###### store and clear current usage data #####
+        for i in range(len(self.market.goods)):
+            self.market.goods[i].oldUsage = copy.copy(self.market.goods[i].usage)
+            self.market.goods[i].usage = 0
 
 
         ###### Household loop ######
@@ -412,12 +416,9 @@ class Earth(World):
         for household in self.random.shuffleAgentsOfType(HH):
             household.mobMixStep(self)
         lg.debug('Household step required ' + str(time.time()- tthh) + ' seconds')##OPTPRODUCTION
-
-        for person in self.getAgentsByType(PERS):
-            person.attr['mobMeme'] = person.attr['plannedUsage']
-            
-#        for cell in self.getAgentsByType(CELL):
-#            cell.aggregateEmission(self)
+        
+        for cell in self.getAgentsByType(CELL):
+            cell.aggregateEmission(self)
 
         self.market.updateSales()
         
@@ -454,7 +455,8 @@ class Earth(World):
             lg.info( 'Step ' + str(self.time) + ' done in ' + "{:2.4f}".format((time.time()-tt)) + ' s')
 
         if self.isRoot:
-            print('Step ' + str(self.time) + ' done in ' + "{:2.4f}".format((time.time()-tt)) + ' s --', end='')
+            print('Step ' + str(self.time) + ' done in ' + "{:2.4f}".format((time.time()-tt)) + ' s')#, end='')
+            print(' current Usage: ' + str(self.market.getUsage()))
 
     def year2step(self, year):
         return 12 * (year - self.para['startDate'][1]) + self.para['burnIn']
@@ -495,8 +497,8 @@ class Good():
         """
         Method to update the class variable lastGlobalSales
         """
-        if mpiRank == 0:
-            print((' Current global stock: ' + str(newStock)))
+        #if mpiRank == 0:
+            #print((' Current global stock: ' + str(newStock)))
         cls.globalStock = newStock
 
     @classmethod
@@ -515,7 +517,10 @@ class Good():
         self.properties       = propDict
         self.paras            = parameters
         self.currGrowthRate  = 1.
-        self.currStock       = 0
+        self.currStock       = 0.
+        self.currCarStock    = 0
+        self.usage           = 0.
+        self.oldUsage        = 0.
         self.experience      = 1.
         self.initExperience  = initExperience
         self.addToOverallExperience(initExperience)
@@ -537,7 +542,7 @@ class Good():
                   
         
     def initEmissionFunction(self):
-
+        
         if self.label == 'brown':
             def emissionFn(self, market):    
                 correctionFactor = .3  # for maturity
@@ -604,18 +609,16 @@ class Good():
         
         self.emissionFunction = emissionFn
 
-
                 
     def updateEmissionsAndMaturity(self, market):
-
         emissions, maturity = self.emissionFunction(self, market)        
-
         self.properties['emissions'] = emissions
         self.maturity = maturity
 
 #    def updateMaturity(self):
 #        self.maturity = self.getExperience() / self.overallExperience
-        
+
+
     def updateTechnicalProgress(self):
         """
         Updates the growth rate and progress
@@ -630,29 +633,33 @@ class Good():
         else:
             self.currGrowthRate = 0
         self.progress *= 1 + (self.lastGlobalSales[self.goodID]) / float(self.experience + self.initExperience)
+
+########## OLD ############       
+#    def updateTechnicalProgress(self):
+#        """
+#        Updates the growth rate and progress
+#        """
+#        # only endogeneous experience, there may also be exogenous experience, from market
+#        self.experience += self.lastGlobalSales[self.goodID]  
+#        self.addToOverallExperience(self.lastGlobalSales[self.goodID])  
+#        
+#        # use last step global sales for update of the growth rate and technical progress
+#        if self.globalStock[self.goodID] > 0:
+#            self.currGrowthRate = 1 + (self.lastGlobalSales[self.goodID]) / float(self.globalStock[self.goodID])
+#        else:
+#            self.currGrowthRate = 0
+#        self.progress *= 1 + (self.lastGlobalSales[self.goodID]) / float(self.experience + self.initExperience)
         
-        
-        
+                
     def updateSales(self, production=None):
         """
 #        Computes the sales
-#        """ 
-        
+#        """         
         # if production is not given, the internal sales is used
         if production is None:
             self.currLocalSales = self.salesModel()
         else:
             self.currLocalSales = production
-            
-        
-#        self.technicalProgress = self.technicalProgress * (self.currGrowthRate)**self.slope
-#        for prop in self.properties.keys():
-#            self.properties[prop] = (self.initialProperties[prop][0] / self.technicalProgress) + self.initialProperties[prop][1]
-#
-#        self.maturity       =    1 - (1 / self.technicalProgress)
-#
-#        #update experience
-#        self.experience += self.lastGlobalSales[self.goodID]
 
         
     def step(self, market, doTechProgress=True):
@@ -667,31 +674,37 @@ class Good():
         self.oldStock = self.currStock
         self.updateEmissionsAndMaturity(market)                
                 
-            
+    def use(self, quantity=1):
+        """
+        Update of the internal stock
+        """
+        self.usage += quantity         
+
         
-
-    def buy(self,quantity=1):
-        """
-        Update of the internal stock
-        """
-        self.currStock +=1
-        return list(self.properties.values())
-
-    def sell(self, quantity=1):
-        """ 
-        Update of the internal stock
-        """
-        self.currStock -=1
-    
+#    def buy(self,quantity=1):
+#        """
+#        Update of the internal stock
+#        """
+#        self.currStock +=1
+#        return list(self.properties.values())
+#
+#    def sell(self, quantity=1):
+#        """ 
+#        Update of the internal stock
+#        """
+#        self.currStock -=1
+#    
     
     def salesModel(self):
         """
         Surrogate model for sales that can be used if agents sales are not 
         computed explicitely.
         """
-        sales = max([0,self.currStock - self.oldStock])
-        sales = sales + self.oldStock * self.replacementRate
+        sales = max(0, self.usage - self.oldUsage)
+ #       sales = max([0,self.currStock - self.oldStock])
+ #       sales = sales + self.oldStock * self.replacementRate
         return sales
+    
         
     def getProperties(self):
         return list(self.properties.values())
@@ -711,15 +724,19 @@ class Good():
     def getGlobalStock(self):
         return self.globalStock[self.goodID]
 
+
+
+
 class Car():
     """
     Market class that mangages goood, technical progress and stocks.
     """
-    def __init__(self, label, propDict, lifetime):
+    def __init__(self, label, propDict, lifetime, household):
         #import global variables
         self.label    = label
         self.propDict = propDict      
         self.lifetime = lifetime
+        self.owner    = household
 
         
 class Market():
@@ -752,12 +769,15 @@ class Market():
         self.burnIn              = burnIn
         self.goods               = dict()                     # keys: goodIDs, values: goods
        # self.sales               = list()
-        
+       
         self.experienceBrownExo = list()
         self.experienceGreenExo = list()
         self.experienceBrownStart = 0.
         self.experienceGreenStart = 0.
         self.germany = False
+        
+        self.nCars = [0., 0.]
+        
 
         #adding market globals
         self.glob.registerValue('sales' , np.asarray([0]),'sum')
@@ -781,7 +801,8 @@ class Market():
         
         # push current Sales to globals for sync
         #ToDo: check this implementation of class variables
-        sales = np.asarray([good.currLocalSales for good in self.goods.values()])
+        sales = np.asarray([(good.usage-good.oldUsage) for good in self.goods.values()])
+        #sales = np.asarray([good.currLocalSales for good in self.goods.values()])
         self.glob.updateLocalValues('sales', sales * self.para['reductionFactor'])
             
         # pull sales from last time step to oldSales for technical chance
@@ -802,7 +823,7 @@ class Market():
         return [self.goods[iGood].getMaturity() for iGood in list(self.goods.keys())]
 
     def getCurrentExperience(self):
-        return [self.goods[iGood].getExperience() for iGood in list(self.goods.keys())]
+        return [max(0,self.goods[iGood].getExperience()) for iGood in list(self.goods.keys())]
 
 
     def computeStatistics(self):
@@ -971,6 +992,9 @@ class Market():
                 self.globalRecord['prop_' + self.goods[iGood].label].set(self.time, self.goods[iGood].getProperties())
             self.globalRecord['allTimeProduced'].set(self.time, self.getCurrentExperience())
             self.globalRecord['maturities'].set(self.time, self.getCurrentMaturity())
+            self.globalRecord['numberOfCars'].set(self.time, self.getNumberOfCars())
+            self.globalRecord['usage'].set(self.time, self.getUsage())
+            
 
         lg.debug('new value of allTimeProduced: ' + str(self.getCurrentExperience()))##OPTPRODUCTION
         # reset sales
@@ -1026,21 +1050,24 @@ class Market():
         return np.asarray([self.goods[iGood].getProperties() * 
                            (1 + np.random.randn(self.nProp) * self.propRelDev) 
                            for iGood in range(self.__nMobTypes__)])
+
+    def getNumberOfCars(self):
+        return self.nCars
     
-    
-    
-    def buyCar(self, mobTypeIdx):
+    def getUsage(self):
+        usages = [good.usage for good in self.goods.values()]
+        return usages
+            
+    def buyCar(self, carTypeIdx):
         # get current properties form good class
-        propDict = self.goods[mobTypeIdx].buy() * (1 + np.random.randn(self.nProp)*self.propRelDev)
-
+        propDict = self.goods[carTypeIdx].getProperties() * (1 + np.random.randn(self.nProp)*self.propRelDev)
+        self.nCars[carTypeIdx] += 1
         return propDict
-    
-    
-    def sellCar(self, mobTypeIdx):
-        self.goods[mobTypeIdx].sell()
         
+    def removeCar(self, carTypeIdx):
+        self.nCars[carTypeIdx] -= 1
 
-
+        
 
 
 class Infrastructure():
@@ -1217,15 +1244,23 @@ class Person(Agent, Parallel):
 
         Agent.register(self, world, parentEntity, liTypeID)
         self.loc = parentEntity.loc
-        self.loc.peList.append(self.nID)
+        self.loc.peIDList.append(self.nID)
         self.hh = parentEntity
         self.hh.addAdult(self)
 
     def initMobMeme(self):
-        unnorm = np.random.choice(10,5)
-        memeSum = np.sum(unnorm)
-        self.attr['mobMeme'] = [unnorm[i]/memeSum for i in range(5)]
-
+        # create initial mobility meme
+        car = min(0.99, max(0.,np.random.normal(loc=0.70, scale=0.15)))
+        if random.random() < 0.1:
+            brown, green = 0., car
+        else:
+            brown, green = car, 0.
+        public = min(1.-car, max(0.,np.random.normal(loc=0.15, scale=0.05)))
+        shared = min(1.-car-public, max(0.,np.random.normal(loc=0.0, scale=0.05)))
+        none   = max(0,min(1.,1.-car-public-shared))
+        self.attr['plannedUsage'] = [brown, green, public, shared, none]
+        self.attr['mobMeme'] = self.attr['plannedUsage']
+        print(self.attr['mobMeme'])
     
     def weightFriendExperience(self, world, commUtilPeers, weights):        
         friendUtil = commUtilPeers[:,self['mobType']]
@@ -1496,7 +1531,18 @@ class Person(Agent, Parallel):
             w_full = normalize(prod1D(w_fitness,weights))  
             self.imitation =  np.unique(np.random.choice(mobTypePeers, 2, p=w_full))
             #print(1)
-
+            
+    def realizeMobilityChoice(self, market):
+        meme = self.attr['plannedUsage']
+        # calculate travelled distances
+        totalDistance = np.dot(self.attr['nJourneys'], MEAN_KM_PER_TRIP)
+        distances = [meme[i] * totalDistance for i in range(5)]
+        # register usage of mobility goods
+        for i in range(len(market.goods)):
+            market.goods[i].use(distances[i])
+        # save new mobility meme    
+        self.attr['mobMeme'] = meme
+        return meme, distances
 
     def imitateMobMix(self, utilPeers, mobMemePeers):
         #pdb.set_trace()
@@ -1517,9 +1563,31 @@ class Person(Agent, Parallel):
             
           #  w_full = normalize(prod1D(w_fitness,weights))
             idx = np.random.choice(range(len(mobMemePeers)),1,p=w_fitness)
+            if (utilPeers[idx] > self.attr['util']) or random.random() < 0.1: 
+                self.attr['plannedUsage'] =  mobMemePeers[idx]    
+
+    def imitateMobMix1(self, utilPeers, mobMemePeers):
+        #pdb.set_trace()
+        if self.attr['preferences'][INNO] > .15 and random.random() > .98:
+            #self.imitation = [np.random.choice(self.attr['commUtil'].shape[0])]
+            idx = np.random.choice(range(len(mobMemePeers)))
+            self.attr['plannedUsage'] = mobMemePeers[idx]
+        else:
+            if np.sum(~np.isfinite(utilPeers)) > 0:
+                lg.info('Warning for utilPeers:')
+                lg.info(str(utilPeers))
+            # weight of the fitness (quality) of the memes
+            sumUtilPeers = sum1D(utilPeers)
+            if sumUtilPeers > 0:
+                w_fitness = utilPeers / sumUtilPeers
+            else:
+                w_fitness = np.ones_like(utilPeers) / utilPeers.shape[0]
+            
+          #  w_full = normalize(prod1D(w_fitness,weights))
+            idx = np.random.choice(range(len(mobMemePeers)),1,p=w_fitness)
             self.attr['plannedUsage'] =  mobMemePeers[idx]    
         
-            
+          
     def mobMixStep(self, earth):
 #        earth = core.earth
         #load data
@@ -1603,7 +1671,7 @@ class GhostPerson(GhostAgent):
 
         GhostAgent.register(self, world, parentEntity, liTypeID)
         self.loc = parentEntity.loc
-        self.loc.peList.append(self.nID)
+        self.loc.peIDList.append(self.nID)
         self.hh = parentEntity
 
 class GhostHousehold(GhostAgent):
@@ -1617,28 +1685,22 @@ class GhostHousehold(GhostAgent):
 
         #self.queueConnection(locID,CON_LH)
         self.loc = parentEntity
-        self.loc.hhList.append(self.nID)
+        self.loc.hhIDList.append(self.nID)
 
 class Household(Agent, Parallel):
     __slots__ = ['gID', 'nID']
-    
-
-        
+            
     def __init__(self, world, **kwProperties):
         Agent.__init__(self, world, **kwProperties)
-        Parallel.__init__(self, world, **kwProperties)
-        
+        Parallel.__init__(self, world, **kwProperties)        
         self.computeTime = 0
-        self.carTypes = [0., 0.]
-        self.carNeed = [0.,0.]
         self.action = False
+        self.carNeed = [0.,0.]
 
         if world.getParameters()['util'] == 'cobb':
             self.utilFunc = cobbDouglasUtilNumba
         elif world.getParameters()['util'] == 'ces':
             self.utilFunc = self.CESUtil
-
-        
 
 
     @staticmethod
@@ -1698,7 +1760,7 @@ class Household(Agent, Parallel):
 
         #self.queueConnection(locID,CON_LH)
         self.loc = parentEntity
-        self.loc.hhList.append(self.nID)
+        self.loc.hhIDList.append(self.nID)
 
     def addAdult(self, personInstance):
         """adding reference to the person to household"""
@@ -1777,7 +1839,7 @@ class Household(Agent, Parallel):
         return combActions, overallUtil
 
 
-    def takeInitialActions(self, earth, persons):
+    def takeInitialActions(self, earth, adults):
         """
         Method to execute the optimal actions for selected persons of the household
         """
@@ -1792,14 +1854,14 @@ class Household(Agent, Parallel):
             carTypes[idx] += 1
             propDict = earth.market.buyCar(idx)
             lifetime = int(10 * random.random())
-            cars.append( Car(label, propDict, lifetime) )
+            cars.append( Car(label, propDict, lifetime, self) )
             self.loc.addToTraffic(idx)
             return carTypes, cars        
         
         carTypes = [0,0]
         cars = list()
         randNr = random.random()
-        if len(persons) < 2:
+        if len(adults) < 2:
             if randNr < 0.6:
                 carTypes, cars = initCar(self, carTypes, cars, randNr)
         else:
@@ -1811,27 +1873,16 @@ class Household(Agent, Parallel):
         self.attr['carTypes'] = carTypes
         self.cars = cars
         
-        for person in persons:
-            # create initial mobility meme
-            car = min(1., max(0.,np.random.normal(loc=0.55, scale=0.15)))
-            if random.random() < 0.01:
-                brown, green = 0., car
-            else:
-                brown, green = car, 0.
-            public = min(1.-car, max(0.,np.random.normal(loc=0.15, scale=0.05)))
-            shared = min(1.-car-public, max(0.,np.random.normal(loc=0.0, scale=0.03)))
-            none = 1.-car-public-shared
-            person.attr['mobMeme'] = [brown, green, public, shared, none]
-            
+        for adult in adults:          
        #======  BAUSTELLE: ======
             properties = [0,0,0]
-            person.attr['prop'] = properties
+            adult.attr['prop'] = properties
             if earth.time <  earth.para['omniscientBurnIn']:
-                person.attr['lastAction'] =  random.randint(0, int(1.5*earth.para['mobNewPeriod']))
+                adult.attr['lastAction'] =  random.randint(0, int(1.5*earth.para['mobNewPeriod']))
             else:
-                person.attr['lastAction'] = 0
+                adult.attr['lastAction'] = 0
 
-            nJourneys = person.attr['nJourneys'].tolist()
+            nJourneys = adult.attr['nJourneys'].tolist()
             emissionsPerKm = properties[EMISSIONS] * earth.market.para['reductionFactor']# in kg/km
                         
             #TODO optimize code
@@ -1841,17 +1892,17 @@ class Household(Agent, Parallel):
                 
             # add personal emissions to household sum
             #emissions[actionIdx] += personalEmissions / 1000. # in kg Co2
-            person['emissions'] = personalEmissions / 1000. # in kg Co2
+            adult['emissions'] = personalEmissions / 1000. # in kg Co2
             
             #calculate costs
             personalCosts = properties[FIXEDCOSTS]
             for nTrips, avgKm in zip(nJourneys, MEAN_KM_PER_TRIP): 
                 personalCosts += float(nTrips) * avgKm * properties[OPERATINGCOSTS] 
-            person['costs'] = personalCosts
+            adult['costs'] = personalCosts
             # add cost of mobility to the expenses
             self.attr['expenses'] += personalCosts
         
-        return carTypes, cars
+#        return carTypes, cars
 
 #    def takeActions(self, earth, persons, actionIds):
 #        """
@@ -1941,54 +1992,84 @@ class Household(Agent, Parallel):
 
     def calculateConsequences(self, market):
 
-        # calculate money consequence
-        money = min(1., max(1e-5, 1 - self.get('expenses') / self.get('income')))
-
+        hhEmissions = np.zeros(5)     # HH's total emissions per mobility type
+        hhDistances = np.zeros(5)     # HH's travelled distances per mobility type
         
-        hhLocation = self.loc
-        # make list of household's emissions per mobility type
-        emissions = np.zeros(5)
-        if self.get('carTypes')[0]>0 :
+        # get costs and emissions (per km)
+        fixedCosts     = np.zeros(5)
+        operatingCosts = np.zeros(5)
+        emissionsPerKm = np.zeros(5)  
+        if self.attr['carTypes'][0]>0 :
             brownCars = [c for c in self.cars if c.label == 'brown']
-            emissions[0] = np.mean([c.propDict[EMISSIONS] for c in brownCars])
-        if self.get('carTypes')[1]>0 :
+            emissionsPerKm[0] = np.mean([c.propDict[EMISSIONS] for c in brownCars])
+            fixedCosts[0]     = np.sum([c.propDict[FIXEDCOSTS] for c in brownCars])
+            operatingCosts[0] = np.mean([c.propDict[OPERATINGCOSTS] for c in brownCars])
+        if self.attr['carTypes'][1]>0 :
             greenCars = [c for c in self.cars if c.label == 'green']
-            emissions[1] = np.mean([c.propDict[EMISSIONS] for c in greenCars])
+            emissionsPerKm[1] = np.mean([c.propDict[EMISSIONS] for c in greenCars])
+            fixedCosts[1]     = np.sum([c.propDict[FIXEDCOSTS] for c in greenCars])
+            operatingCosts[1] = np.mean([c.propDict[OPERATINGCOSTS] for c in greenCars])
         for i in range(2,5):
-            emissions[i] = market.goods[i].properties['emissions']
+            emissionsPerKm[i] = market.goods[i].properties['emissions']
+            fixedCosts[i]     = market.goods[i].properties['fixedCosts']
+            operatingCosts[i] = market.goods[i].properties['operatingCosts']        
+        self.emissionsPerKm = emissionsPerKm
+        self.fixedCostsTotal = np.sum(fixedCosts)
+        hhOperatingCostsTotal = 0.
         
         for adult in self.adults:
 
-            meme = adult.get('mobMeme')
+            # realize mobility choice for adult 
+            meme, distances = adult.realizeMobilityChoice(market)
+           # print(distances)
 
-            convenience = sum(hhLocation.get('convenience')[i] * meme[i] for i in range(5))
+            # calculate emissions and costs
+            emissions = [emissionsPerKm[i] * distances[i] for i in range(5)]
+            adult.attr['costs'] = np.dot(distances, operatingCosts)
+            adult.attr['emissions'] = np.sum(emissions)
 
+            # calculate convenience
+            convenience = sum(self.loc.attr['convenience'][i] * meme[i] for i in range(5))
             if convenience > 1.:##OPTPRODUCTION
                 convenience = 1. ##OPTPRODUCTION
                 lg.info('Warning: Conveniences exeeded 1.0')##OPTPRODUCTION
-
             # calculate ecology:
-            ecology = sum(market.ecology(emissions[i]) * meme[i] for i in range(5))
-
+            ecology = sum(market.ecology(emissionsPerKm[i]) * meme[i] for i in range(5))  # emissions per km or emissions?
             #calculate innovation
-            innovation = sum(market.innovation[i] * meme[i] for i in range(5))
-                                   
+            innovation = np.sum([market.innovation[i] * meme[i] for i in range(5)])                                   
             # assuring that consequences are within 0 and 1
-            for consequence in [convenience, ecology, money, innovation]:     ##OPTPRODUCTION
+            for consequence in [convenience, ecology, innovation]:     ##OPTPRODUCTION
                 if not((consequence <= 1) and (consequence >= 0)):            ##OPTPRODUCTION
                     print(consequence)                                         ##OPTPRODUCTION      
                     import pdb                                                ##OPTPRODUCTION
                     pdb.set_trace()                                           ##OPTPRODUCTION  
                 assert (consequence <= 1) and (consequence >= 0)              ##OPTPRODUCTION
-
-            adult.attr['consequences'][:] = [convenience, ecology, money, innovation]
+            # set consequences (except money)
+            adult.attr['consequences'][:] = [convenience, ecology, 0.1, innovation]
             
+            # add person's travelled distances, operating costs and emissions to HH's distances/emissions
+            hhDistances = np.add(distances, hhDistances) 
+            hhEmissions = np.add(emissions, hhEmissions)
+            hhOperatingCostsTotal += adult.attr['costs']
+        
+        self.operatingCostsTotal = hhOperatingCostsTotal
+        self.attr['expenses'] = self.fixedCostsTotal + self.operatingCostsTotal
+                
+        # calculate adn set money consequence
+        money = min(1., max(1e-5, 1 - self.attr['expenses'] / self.attr['income']))
+        for adult in self.adults:
+            adult.attr['consequences'][2] = money
+        
+        #print(hhDistances)
+        # add traffic and emissions to cell
+        self.loc.attr['traffic'] = np.add(hhDistances, self.loc.attr['traffic'])
+        self.loc.attr['emissions'] = np.add(hhEmissions, self.loc.attr['emissions'])    
+        
 
     def bestMobilityChoice(self, earth, persGetInfoList , forcedTryAll = False):
         """
         (It's the best choice. It's true. It's huge)
-        """
-        
+        """        
         market = earth.market
         actionTaken = True
         if len(self.adults) > 0 :
@@ -2189,11 +2270,11 @@ class Household(Agent, Parallel):
         label = ['brown','green'][carIdx]
         propDict = market.buyCar(carIdx)
         lifetime = int(max(6.,np.random.normal(60,10)))
-        car = Car(label, propDict, lifetime)
+        car = Car(label, propDict, lifetime, self)
         self.cars.append(car)
         self.attr['carTypes'][carIdx] += 1                
 
-    def checkNeedForCar(self):
+    def checkNeedForCar(self, market):
         # consider buying car?
         if any(n for n in self.carNeed) > 1:
             self.action = True
@@ -2201,27 +2282,29 @@ class Household(Agent, Parallel):
         if (self.carNeed[0] < -1 and self.action == False):
             brownCars = filter(lambda c: c.label == 'brown', self.cars)
             if brownCars != []:
-                self.removeCar(random.choice(brownCars))
+                self.removeCar(random.choice(brownCars), market)
         if (self.carNeed[1] < -1 and self.action == False):
             greenCars = filter(lambda c: c.label == 'green', self.cars)
             if greenCars != []:
-                self.removeCar(random.choice(greenCars))
+                self.removeCar(random.choice(greenCars), market)
                 
-    def checkCarLifetimes(self):
+    def checkCarLifetimes(self, market):
         for car in self.cars:
             if car.lifetime == 0:
-                self.removeCar(car)
+                self.removeCar(car, market)
                 self.action = True
             else:
                 car.lifetime -= 1
             
-    def removeCar(self, car):
+    def removeCar(self, car, market):
         if car.label =='brown':
-            self.carTypes[0] -= 1
+            idx = 0
         elif car.label =='green':
-            self.carTypes[1] -= 1
+            idx = 1        
+        self.attr['carTypes'][idx] -= 1
         self.cars.remove(car)
-
+        market.removeCar(idx)
+        
     def checkCarUsage(self):
         plannedCarUsage = np.zeros(2)
         brownUsers = list()
@@ -2241,13 +2324,17 @@ class Household(Agent, Parallel):
             if any(d < 0. for d in difference):
                 amount = min(np.abs(difference))                
                 if difference[0] > 0.:
+                    self.carNeed[0] += 0.1
                     self.redistBetweenCars('brownToGreen', amount, brownUsers)
                 else: 
+                    self.carNeed[1] += 0.1
                     self.redistBetweenCars('greenToBrown', amount, greenUsers)
                 difference, brownUsers, greenUsers = self.checkCarUsage()           
             if difference[0] > 0.:
+                self.carNeed[0] += 0.1
                 self.redistToOther('fromBrown', difference[0], brownUsers)            
             if difference[1] > 0.:
+                self.carNeed[1] += 0.1
                 self.redistToOther('fromGreen', difference[1], greenUsers)
         
     def redistBetweenCars(self, direction, amount, users):
@@ -2291,8 +2378,8 @@ class Household(Agent, Parallel):
     def mobMixStep(self, earth):
         tt = time.time()
         
-        self.checkCarLifetimes()
-        self.checkNeedForCar()
+        self.checkCarLifetimes(earth.market)
+        self.checkNeedForCar(earth.market)
         if random.random() < 0.03:
             self.action = True         
                                   
@@ -2430,8 +2517,8 @@ class Cell(Location, Parallel):
         kwProperties.update({'population': 0, 'convenience': [0.,0.,0.,0.,0.], 'carsInCell':[0,0,0,0,0], 'regionId':0})
         Location.__init__(self, earth, **kwProperties)
         Parallel.__init__(self, earth, **kwProperties)
-        self.hhList = list()
-        self.peList = list()
+        self.hhIDList = list()
+        self.peIDList = list()
         self.carsToBuy = 0
         self.deleteQueue =1
         self.cellSize      = 1.
@@ -2453,10 +2540,10 @@ class Cell(Location, Parallel):
 
 
     def getHHs(self):
-        return self.hhList
+        return self.hhIDList
 
     def getPersons(self):
-        return self.peList
+        return self.peIDList
 
     def getConnLoc(self,liTypeID=1):
         return self.getAgentOfCell(liTypeID=1)
@@ -2509,7 +2596,7 @@ class Cell(Location, Parallel):
 
         popDensity = np.float(self.get('popDensity'))
         for i, funcCall in enumerate(self.convFunctions):
-            convAll.append(funcCall(popDensity, parameters, currentMaturity[i], self))
+            convAll.append(max(0,funcCall(popDensity, parameters, currentMaturity[i], self)))
         
         homeChargingConv = parameters['homeChargConv']
         #convenience of electric mobility is additionally dependen on the infrastructure
@@ -2569,21 +2656,22 @@ class Cell(Location, Parallel):
         return eConv
     
     
-    def aggregateEmission(self, earth):
-        mobTypesPers = earth.getAttrOfAgents('mobType', self.peList)
-        emissionsCell = np.zeros(5)
-        emissionsPers = earth.getAttrOfAgents('emissions', self.peList)
-        for mobType in range(5):
-            idx = mobTypesPers == mobType
-            emissionsCell[mobType] = emissionsPers[idx].sum()
-        
-            if mobType == GREEN:
-                # elecric car is used -> compute estimate of power consumption
-                # for the current model 0.6 kg / kWh
-                electricConsumption = emissionsPers[idx].sum() / 0.6
-                self.attr['electricConsumption'] =  electricConsumption
-        
-        self.attr['emissions'] =  emissionsCell
+    def aggregateEmission(self, earth): 
+#        mobTypesPers = earth.getAttrOfAgents('mobType', self.peIDList)
+#        emissionsCell = np.zeros(5)
+#        emissionsPers = earth.getAttrOfAgents('emissions', self.peIDList)
+#        for mobType in range(5): 
+#            idx = mobTypesPers == mobType
+#            emissionsCell[mobType] = emissionsPers[idx].sum()
+#        
+#            if mobType == GREEN:
+#                # elecric car is used -> compute estimate of power consumption
+#                # for the current model 0.6 kg / kWh
+#                electricConsumption = emissionsPers[idx].sum() / 0.6
+#                self.attr['electricConsumption'] =  electricConsumption
+#        
+#        self.attr['emissions'] =  emissionsCell
+        self.attr['electricConsumption'] =  self.attr['emissions'][1] / 0.6 
         
     def step(self, parameters, currentMaturity):
         """
@@ -2614,8 +2702,8 @@ class GhostCell(GhostLocation, Cell):
 
     def __init__(self, earth, **kwProperties):
         GhostLocation.__init__(self, earth, **kwProperties)
-        self.hhList = list()
-        self.peList = list()
+        self.hhIDList = list()
+        self.peIDList = list()
 
 #    def updateHHList_old(self, graph):  # toDo agTypeID is not correct anymore
 #        """
@@ -2624,7 +2712,7 @@ class GhostCell(GhostLocation, Cell):
 #        """
 #        agTypeID = graph.class2NodeType[Household]
 #        hhIDList = self.getPeerIDs(agTypeID)
-#        self.hhList = graph.vs[hhIDList]
+#        self.hhIDList = graph.vs[hhIDList]
 
 #    def updatePeList_old(self, graph):  # toDo agTypeID is not correct anymore
 #        """
@@ -2633,7 +2721,7 @@ class GhostCell(GhostLocation, Cell):
 #        """
 #        agTypeID = graph.class2NodeType[Person] 
 #        hhIDList = self.getPeerIDs(agTypeID)
-#        self.hhList = graph.vs[hhIDList]
+#        self.hhIDList = graph.vs[hhIDList]
 
 class Opinion():
     """

@@ -225,7 +225,7 @@ def scenarioTestMedium(parameterInput, dirPath):
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 0
+    setup.writeAgentFile = True
     setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0

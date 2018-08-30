@@ -1,6 +1,6 @@
 name,value,doSweep,minRange,maxRange,comment
 scenario,0,,,,"# selection of the scenario setup"
-nSteps,160,,,,"# number of simulation steps"
+nSteps,240,,,,"# number of simulation steps"
 burnIn,0,,,,"# number of burn in time steps"
 ioSteps,12,,,,"#number of steps after when the IO writen to file"
 burnInTimeFactor,1,,,,"# time scaling in burnIn"

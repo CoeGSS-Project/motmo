@@ -37,6 +37,7 @@ import logging as lg
 import numpy as np
 import pandas as pd
 from scipy import signal
+import random
 
 
 sys.path.append('../gcfabm')
@@ -401,8 +402,7 @@ def householdSetup(earth, calibration=False):
                            hhType=hhType)
 
             hh.adults = list()
-            hh.register(earth, parentEntity=loc, liTypeID=CON_LH)
-            
+            hh.register(earth, parentEntity=loc, liTypeID=CON_LH)            
 
             hh.loc['population'] = hh.loc['population'] + nPers
 #            if earth.isParallel:
@@ -411,13 +411,23 @@ def householdSetup(earth, calibration=False):
 #                hhID = hh.nID
             assert nAdults > 0 ##OPTPRODUCTION
             
+#            # distribute initial cars
+#            brown = random.random() < 0.8
+#            green = random.random() < 0.01
+#            if brown:
+#                hh.carTypes[0] = 1.
+#            if green:
+#                hh.carTypes[1] = 1.
+            
             for iPers in range(nPers):
-
+                
                 nAgentsCell -= 1
                 nAgents     += 1
-
+                
                 if ages[iPers] < 18:
                     continue    #skip kids
+                
+                # rest: for aduts only
                 prefTuple = opinion.getPref(ages[iPers], genders[iPers], nKids, nPers, income, parameters['radicality'])
 
                 assert len(nJourneysPerPerson[iPers]) == 5##OPTPRODUCTION
@@ -437,13 +447,15 @@ def householdSetup(earth, calibration=False):
                               lastAction  = 0,
                               hhType      = hhType,
                               emissions   = 0.)
-                
+
+                pers.register(earth, parentEntity=hh, liTypeID=CON_HP)                                
                 pers.initMobMeme()
                 pers.imitation = np.random.randint(parameters['nMobTypes'])
-                pers.register(earth, parentEntity=hh, liTypeID=CON_HP)
+                #hh.adults.append(pers)
                 
                 successFlag = True
             
+            hh.takeInitialActions(earth, hh.adults)
             
             currIdx[regionIdx]  += nPers
             nHH                 += 1
@@ -582,6 +594,7 @@ def initTypes(earth):
                                                    ('population', np.int16, 1)],
                                dynamicProperties = [('convenience', np.float64, 5),
                                                    ('carsInCell', np.int32, 5),
+                                                   ('traffic', np.float64, 5),
                                                    ('chargStat', np.int32, 1),
                                                    ('emissions', np.float64, 5),
                                                    ('electricConsumption', np.float64, 1)])
@@ -841,7 +854,11 @@ def initGlobalRecords(earth):
                          ['mat_B', 'mat_G', 'mat_P', 'mat_S', 'mat_N'], style='plot')
     earth.registerRecord('globEmmAndPrice', 'Properties',
                          ['meanEmm','stdEmm','meanFiC','stdFiC','meanOpC','stdOpC'], style='plot')
-
+    earth.registerRecord('numberOfCars', 'Number of brown and green cars ', 
+                         list(enums['mobilityTypes'].values())[:2], style = 'plot')
+    earth.registerRecord('usage', 'Usage per mobility Type ', 
+                         list(enums['mobilityTypes'].values()), style = 'plot')
+    
     if mpiRank == 0:
         print('Setup of global records done in '  + "{:2.4f}".format((time.time()-tt)) + ' s')
 
@@ -955,21 +972,16 @@ def runModel(earth, parameters):
     lg.info('Initial market step done')
     
     for household in earth.random.shuffleAgentsOfType(HH):
-
         household.takeInitialActions(earth, household.adults)
         for adult in household.adults:
             adult.attr['lastAction'] =  np.int(np.random.rand() * np.float(earth.para['mobNewPeriod']))
-
     lg.info('Initial actions done')
-
-
 
     for household in earth.random.shuffleAgentsOfType(HH):
         household.calculateConsequences(earth.market)
         household.util = household.evalUtility(earth, actionTaken=True)
         #household.shareExperience(earth)
-        
-        
+                
     lg.info('Initial actions randomized in -- ' + str( time.time() - tt) + ' s')
 
     initCacheArrays(earth)

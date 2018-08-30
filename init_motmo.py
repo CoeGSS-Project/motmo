@@ -1098,9 +1098,9 @@ def runModel(earth, parameters):
             adult.attr['lastAction'] =  np.int(np.random.rand() * np.float(earth.para['mobNewPeriod']))
 
     lg.info('Initial actions done')
-    convParaList = [good.convenienceParameter for good in earth.market.goods.values()]
+    #convParaList = [good.convenienceParameter for good in earth.market.goods.values()]
     for cell in earth.random.shuffleAgentsOfType(CELL):
-        cell.step(earth.para, convParaList)
+        cell.step(earth.para)
      
     
     earth.market.initPrices()

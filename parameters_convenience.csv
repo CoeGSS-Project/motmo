@@ -37,7 +37,7 @@ sigmaSharedFinal,   1500,,,,"# spread factor for convenience  of car sharing"
 muSharedInit,       4000,,,,"# argument value for convenience maximum of  of car sharing"
 muSharedFinal,      4000,,,,"# argument value for convenience maximum of  of car sharing"
 ################# Infrastructure None ############################",,,,,
-minNoneInit,        0.03,,,,"# minimal convenience of non-motorized transport"
+minNoneInit,        0.015,,,,"# minimal convenience of non-motorized transport"
 minNoneFinal,       0.03,,,,"# minimal convenience of non-motorized transport"
 maxNoneInit,        0.22,,,,"# maximal convenience of non-motorized transport"
 maxNoneFinal,       0.25,,,,"# maximal convenience of non-motorized transport"

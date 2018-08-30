@@ -382,7 +382,7 @@ def assess_km_share_county(earth, doPlot=True):
             plt.ylim([0,1])
             
             #plt.xticks([])
-        plt.xticks(np.arange(0,len(earth.calShareCounty)), countyStr,  rotation=20)
+        plt.xticks(np.arange(0, len(countyStr)), countyStr,  rotation=20)
         plt.legend(['calibraton data', 'simulation data', 'error'])
     return errorDf, earth.calShareCounty, simulationDf, weightOfCat 
 

@@ -119,6 +119,7 @@ def normalizedGaussian(array, center, errStd):
 @njit(cache=True)
 def convenienceFunction(minValue, maxValue, delta, mu, twoSigmaSquare, density):
     return  minValue + delta * math.exp(-(density - mu)**2 / twoSigmaSquare)
+
 @njit(cache=True)
 def convenienceFunctionArray(minValue, maxValue, delta, mu, twoSigmaSquare, density):
     return  minValue + delta * np.exp(-(density - mu)**2 / twoSigmaSquare)
@@ -341,7 +342,64 @@ class Earth(World):
             elif self.timeUnit == 1: # years
                 self.date[1] +=1
         self.computeTime[self.time] += time.time()-ttComp
-    
+
+
+    def digitalization(self):
+        # digitilization parameter
+        timeStep2035 = ((2035 - self.para['startDate'][1])*12) + self.para['burnIn']
+        x = self.timeStep
+        self.greenDigital = x**3/np.max(timeStep2035**3) * self.para['maxGreenDigital']
+
+        def getConvenienceParameters(comvDict, kappa):
+
+            minValue = (1 - kappa) * comvDict['minInit'] + kappa * comvDict['minFinal']
+            maxValue = (1 - kappa) * comvDict['maxInit'] + kappa * comvDict['maxFinal']
+            
+            delta    = kappa * (maxValue - minValue)
+            sigma = (1 - kappa) * comvDict['sigmaInit'] + kappa * comvDict['sigmaFinal']
+            mu    = (1 - kappa) * comvDict['muInit'] + kappa * comvDict['muFinal'] 
+            
+            return [minValue, maxValue, delta, mu, 2*sigma**2]
+        
+        digConv = dict()    
+
+        convDict = dict()
+        convDict['minInit'] = 0
+        convDict['minFinal'] = .02
+        convDict['maxInit'] = 0.
+        convDict['maxFinal']  = .058
+        convDict['muInit'] = 4000
+        convDict['muFinal']  = 3800
+        convDict['sigmaInit'] = 1000
+        convDict['sigmaFinal'] = 1200
+        
+        digConv[GREEN] = getConvenienceParameters(convDict, self.greenDigital)
+        
+        convDict = dict()
+        convDict['minInit'] = 0
+        convDict['minFinal'] = .01
+        convDict['maxInit'] = 0.
+        convDict['maxFinal']  = .03
+        convDict['muInit'] = 2000
+        convDict['muFinal']  = 1000
+        convDict['sigmaInit'] = 800
+        convDict['sigmaFinal'] = 1300
+        
+        digConv[PUBLIC] = getConvenienceParameters(convDict, self.greenDigital)
+        
+        convDict = dict()
+        convDict['minInit'] = 0
+        convDict['minFinal'] = .01
+        convDict['maxInit'] = 0.
+        convDict['maxFinal']  = .05
+        convDict['muInit'] = 4000
+        convDict['muFinal']  = 3500
+        convDict['sigmaInit'] = 400
+        convDict['sigmaFinal'] = 1000
+        
+        digConv[SHARED] = getConvenienceParameters(convDict, self.greenDigital)
+        
+        return digConv
     
     def step(self):
         """
@@ -363,6 +421,10 @@ class Earth(World):
         if self.time > self.para['burnIn']:
             self.chargingInfra.step(self)
 
+            digitaliationConvDict =  self.digitalization()
+        else:
+            digitaliationConvDict = dict()
+
         # proceed market in time
         # stf: sollte das nicht eher am Ende des steps aufgerufen
         # werden? z.b. passiert bei updateTechnologicalProgress nichts
@@ -375,11 +437,18 @@ class Earth(World):
         
         ###### Cell loop ######
         ttCell = time.time()
-        convParaList = list()
-        for good in self.market.goods.values():
-            convParaList.append(good.convenienceParameter)
+        #convenience calculation for all cells
+        
+        for i, good in enumerate(self.market.goods.values()):
+            if i in digitaliationConvDict:
+                lambdaFunc = lambda a: convenienceFunctionArray(*good.convenienceParameter, a['popDensity']) + \
+                                       convenienceFunctionArray(*digitaliationConvDict[i], a['popDensity'])
+            else:
+                lambdaFunc = lambda a: convenienceFunctionArray(*good.convenienceParameter, a['popDensity'])
+            self.setAttrsForTypeVectorized(1, 'convenience', lambdaFunc, idx=i)
+            
         for cell in self.random.shuffleAgentsOfType(CELL):
-            cell.step(self.para, convParaList)
+            cell.step(self.para)
         lg.debug('Cell step required ' + str(time.time()- ttCell) + ' seconds')##OPTPRODUCTION
 
 
@@ -2388,15 +2457,20 @@ class Cell(Location, Parallel):
         
         self.attr['emissions'] =  emissionsCell
         
-    def step(self, parameters, convParaList):
+    def step(self, parameters):
         """
         Step method for cells
         """
         #self.attr['convenience'] *= 0.
         self.attr['emissions'] *= 0.
         self.attr['electricConsumption']= 0.
-        convAll = self.calculateConveniences(convParaList, parameters)
-        self.attr['convenience'][:] =  convAll
+        #convAll = self.calculateConveniences(convParaList, parameters)
+        #self.attr['convenience'][:] =  convAll
+
+        homeChargingConv = parameters['homeChargConv']
+        #convenience of electric mobility is additionally dependen on the infrastructure
+        self.attr['convenience'][GREEN] *= homeChargingConv + (self.electricInfrastructure() * (1.-homeChargingConv))
+
 
 
     def registerObs(self, hhID, prop, util, label):

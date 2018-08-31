@@ -29,7 +29,7 @@ import sys
 import os
 import socket
 import numpy as np
-np.random.seed(seed=1)
+#np.random.seed(seed=1)
 
 import init_motmo as init
 from gcfabm import core
@@ -39,14 +39,14 @@ print('Rank ' +str(core.mpiRank) + ' of ' + str(core.mpiSize))
 debug = True
 showFigures = 0
 
-stopAt2008 = True
+stopAt2008 = False
 
 comm    = core.comm
 mpiRank = core.mpiRank
 
 overallTime = time.time()
 
-simNo, outputPath = core.setupSimulationEnvironment()
+simNo, outputPath = core.setupSimulationEnvironment(comm)
 
 print ('Current simulation number is: ' + str(simNo))
 print ('Current ouputPath number is: ' + outputPath)

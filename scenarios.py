@@ -261,12 +261,8 @@ def scenarioNBH(parameterInput, dirPath):
     setup.LinksUpperLimit  = 2000000
     
     # time
-    setup.nSteps = 340     # number of simulation steps
     setup.timeUnit = init._month  # unit of time per step
     setup.startDate = [1, 2005]
-    setup.burnIn = 100
-    setup.omniscientBurnIn = 10  # no. of first steps of burn-in phase with omniscient agents, max. =burnIn
-
     # spatial
     setup.isSpatial = True
     setup.spatialRedFactor = 8.
@@ -300,7 +296,7 @@ def scenarioNBH(parameterInput, dirPath):
     setup.cellSizeMap = np.load(setup.resourcePath + 'cell_area_62x118.npy')
 
     setup.roadKmPerCell = np.load(
-        setup.resourcePath + 'road_km_per_cell_62x118.npy') / setup.cellSizeMap
+        setup.resourcePath + 'road_km_all_new_62x118.npy') / setup.cellSizeMap
 
 
     assert np.sum(np.logical_xor(np.isnan(setup.population),
@@ -328,7 +324,7 @@ def scenarioNBH(parameterInput, dirPath):
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 0
+    setup.writeAgentFile = 1
     setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
@@ -360,11 +356,8 @@ def scenarioGer(parameterInput, dirPath):
     setup.allTypeObservations = True
 
     # time
-    setup.nSteps = 340  # number of simulation steps
     setup.timeUnit = init._month  # unit of time per step
     setup.startDate = [1, 2005]
-    setup.burnIn = 100
-    setup.omniscientBurnIn = 10  # no. of first steps of burn-in phase with omniscient agents, max. =burnIn
 
 
     setup.AgentsUpperLimit = 10000000
@@ -378,11 +371,10 @@ def scenarioGer(parameterInput, dirPath):
         # overwrite the standart parameter
         setup.reductionFactor = parameterInput.reductionFactor
 
-
     # setup.landLayer[np.isnan(setup.landLayer)] = 0
     if mpiSize > 1:
-        setup.landLayer = np.load(setup.resourcePath + 'partition_map_' + str(mpiSize) + '.npy')
-        setup.landLayer = ((setup.landLayer !=0) & (~np.isnan(setup.landLayer))).astype(int) 
+        setup.mpiRankLayer = np.load(setup.resourcePath + 'partition_map_' + str(mpiSize) + '.npy')
+        setup.landLayer = (~np.isnan(setup.mpiRankLayer)).astype(int) 
     else:
         setup.landLayer = np.load(setup.resourcePath + 'land_layer_186x219.npy')
         setup.landLayer =  ((setup.landLayer !=0) & (~np.isnan(setup.landLayer))).astype(int) 

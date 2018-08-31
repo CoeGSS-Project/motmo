@@ -1152,7 +1152,8 @@ class Infrastructure():
         
         self.potentialMap = potMap[earth.cellMapIds] ** potFactor# basic proxi variable for drawing new charging stations
         # normalizing as probablity
-        self.potentialMap = self.potentialMap / np.sum(self.potentialMap)
+        self.potentialMap[np.isnan(self.potentialMap)] = 0
+        self.potentialMap = self.potentialMap / np.nansum(self.potentialMap)
         self.potentialMap = normalize(self.potentialMap)
         # share of new stations that are build in the are of this process
         self.shareStationsOfProcess = np.sum(potMap[earth.cellMapIds]) / np.nansum(potMap)
@@ -1299,7 +1300,7 @@ class Infrastructure():
         uniqueRandIdx, count = np.unique(randIdx,return_counts=True)
         
         currNumStations[uniqueRandIdx] += count   
-        if (currNumStations < 0) or (currNumStations > 1e6):
+        if (np.sum(currNumStations) < 0) or (np.sum(currNumStations) > 1e6):
             import pdb
             pdb.set_trace()
         earth.setAttrOfAgentType('chargStat', currNumStations, agTypeID=CELL)

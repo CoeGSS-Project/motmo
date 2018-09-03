@@ -52,32 +52,32 @@ _hh  = 1
 _pe  = 2
 
 #%% INIT
-plotFunc.append('plot_globalRecords')
-plotFunc.append('plotEmissionOverTime')
-plotFunc.append('plotElectricDemandOverTime')
-plotFunc.append('plot_globalID')
-
-plotFunc.append('plot_emissions')
-plotFunc.append('plot_electricConsumption')
-plotFunc.append('plot_ChargingStations')
-plotFunc.append('plot_GreenConvenienceOverTime')
-plotFunc.append('plot_stockAllRegions')
-
-plotFunc.append('plot_agePerMobType')
-plotFunc.append('plot_womanSharePerMobType')
-plotFunc.append('plot_expectUtil')
-plotFunc.append('plot_selfUtil')
-plotFunc.append('plot_carStockBarPlot')
-plotFunc.append('plot_carSales')
+#plotFunc.append('plot_globalRecords')
+#plotFunc.append('plotEmissionOverTime')
+#plotFunc.append('plotElectricDemandOverTime')
+#plotFunc.append('plot_globalID')
+#
+#plotFunc.append('plot_emissions')
+#plotFunc.append('plot_electricConsumption')
+#plotFunc.append('plot_ChargingStations')
+#plotFunc.append('plot_GreenConvenienceOverTime')
+#plotFunc.append('plot_stockAllRegions')
+#
+#plotFunc.append('plot_agePerMobType')
+#plotFunc.append('plot_womanSharePerMobType')
+#plotFunc.append('plot_expectUtil')
+#plotFunc.append('plot_selfUtil')
+#plotFunc.append('plot_carStockBarPlot')
+#plotFunc.append('plot_carSales')
 plotFunc.append('plot_properiesPerMobType')
-plotFunc.append('plot_salesProperties')
-plotFunc.append('plot_prefPerLabel')
-plotFunc.append('plot_utilPerLabel')
-plotFunc.append('plot_greenPerIncome')
-plotFunc.append('plot_averageIncomePerCell')
-plotFunc.append('plot_incomePerLabel')
-plotFunc.append('plot_meanPrefPerLabel')
-plotFunc.append('plot_meanConsequencePerLabel')
+#plotFunc.append('plot_salesProperties')
+#plotFunc.append('plot_prefPerLabel')
+#plotFunc.append('plot_utilPerLabel')
+#plotFunc.append('plot_greenPerIncome')
+#plotFunc.append('plot_averageIncomePerCell')
+#plotFunc.append('plot_incomePerLabel')
+#plotFunc.append('plot_meanPrefPerLabel')
+#plotFunc.append('plot_meanConsequencePerLabel')
 #plotFunc.append('plot_convOverTime')
 #plotFunc.append('plot_cellMovie')
 plotFunc.append('plot_carsPerCell')
@@ -115,7 +115,7 @@ plotYears     = True         # only applicable in plots without burn-in
 
 
 global NSTEPS 
-NSTEPS     = 408#simParas['nSteps']
+NSTEPS     = simParas['nSteps']
 STEP_DELTA = simParas['ioSteps']
 global NMOBTYPES 
 NMOBTYPES  = simParas['nMobTypes']
@@ -124,7 +124,7 @@ N_BURN_IN    = simParas['burnIn']
 PLOTYEARS = plotYears
 WITHOUTBURNIN = WITHOUTBURNIN
 
-IO_STEPS = NSTEPS//STEP_DELTA
+IO_STEPS = (NSTEPS//STEP_DELTA)+1
 IO_BURN_IN = N_BURN_IN//STEP_DELTA
 IO_YEAR_STEP = 12 // STEP_DELTA
 
@@ -303,6 +303,12 @@ def labelYears(factor):
         years = ((NSTEPS - N_BURN_IN)//STEP_DELTA) / (12//STEP_DELTA) / factor
         plt.xticks(np.linspace(IO_BURN_IN,IO_STEPS,years+1), [str(2005 + year*factor) for year in range(int(years+1))], rotation=30)
 
+def labelYearsGlob(factor):
+    if PLOTYEARS:
+        years = ((NSTEPS - N_BURN_IN)//STEP_DELTA) / (12//STEP_DELTA) / factor
+        plt.xticks(np.linspace(N_BURN_IN,NSTEPS,years+1), [str(2005 + year*factor) for year in range(int(years+1))], rotation=30)
+
+
 
 def cellData2Map(cellData, data):
     
@@ -391,7 +397,7 @@ def plot_globalRecords(data,  parameters, enums, filters):
                 #print cData[:,i]
 
 
-        labelYears(5)
+        labelYearsGlob(5)
         if WITHOUTBURNIN:
             plt.xlim([IO_BURN_IN,IO_STEPS])        
         if 'stock' in data.name:
@@ -409,7 +415,7 @@ def plotEmissionOverTime(data,  parameters, enums, filters):
     for ti in range(IO_STEPS):
         stepData = np.zeros(len(enums['mobilityTypes']))
         for brand in range(0,len(enums['mobilityTypes'])):
-            boolMask = data.pe['mobType'][ti]== brand
+            boolMask = data.pe['mobType'][ti] == brand
         
             emData = data.pe['emissions'][np.ix_([ti],boolMask)]
             stepData[brand] = np.sum(emData,axis=1)
@@ -422,7 +428,8 @@ def plotEmissionOverTime(data,  parameters, enums, filters):
         df.plot.bar(stacked=True, width = 1)
         plt.title('CO2-Emissions from tranport sector in [kg]')
         labelYears(5)
-        plt.xlim([N_BURN_IN, IO_STEPS])
+        if WITHOUTBURNIN:
+            plt.xlim([N_BURN_IN, IO_STEPS])
         plt.legend(list(enums['mobilityTitles'].values()))
         plt.savefig(path + '/emissions_all')
 #%%        
@@ -446,7 +453,7 @@ def plotElectricDemandOverTime(data,  parameters, enums, filters):
         #%%
         df = pd.read_csv(path + '/electricDemand_all.csv', index_col=0)
         df.plot.bar(stacked=True, width = 1)
-        plt.title('CO2-Emissions from tranport sector in [kg]')
+        plt.title('Electric demand in GWh')
         labelYears(5)
         plt.xlim([N_BURN_IN, IO_STEPS])
         plt.legend(list(enums['mobilityTitles'].values()))
@@ -815,22 +822,20 @@ def plot_properiesPerMobType(data,  parameters, enums, filters):
     consequences per mobility type
     """
     fig = plt.figure()
-    res = np.zeros([IO_STEPS,len(enums['mobilityTypes'])])
-    for i in range(2):
-        plt.subplot(2,1,i+1)
+    res = np.zeros([IO_STEPS,len(enums['mobilityTypes']), len(enums['properties'])])
+    for i in range(3):
+        plt.subplot(3,1,i+1)
         for ti in range(IO_STEPS):
             for carLabel in range(len(enums['mobilityTypes'])):
                 idx = data.pe['lastAction'][ti] == carLabel
-                res[ti, carLabel] = np.mean(data.pe['prop'][ti,idx])
+                res[ti, carLabel] = np.mean(data.pe['prop'][ti,idx],0)
         legStr = list()
         for label in range(len(enums['mobilityTypes'])):
             legStr.append(enums['mobilityTypes'][label])
 
-        plt.plot(res)
-        if i == 0:
-            plt.title('Average costs by mobility type')
-        else:
-            plt.title('Average emissions by mobility type')
+        plt.plot(res[:,:,i])
+        plt.title('Average ' + enums['properties'][i+1])
+
         if WITHOUTBURNIN:
             plt.xlim([IO_BURN_IN,IO_STEPS])
         labelYears(5)
@@ -921,7 +926,7 @@ def plot_utilPerLabel(data,  parameters, enums, filters):
     for ti in range(IO_STEPS):
 
         for carLabel in range(0,len(enums['mobilityTypes'])):
-            boolMask = data.pe['mobType'][ti == carLabel]
+            boolMask = data.pe['mobType'][ti]  == carLabel
             res[ti, carLabel, 0] = np.mean(data.pe['util'][ti, boolMask])
             for prefType in range(4):
                 boolMask2 = np.full(data.pe.shape[1], False, dtype=bool)

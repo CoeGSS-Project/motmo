@@ -449,7 +449,7 @@ def householdSetup(earth, calibration=False):
                            expenses=0,
                            hhType=hhType)
 
-            hh.adults = list()
+            
             hh.register(earth, parentEntity=loc, liTypeID=CON_CH)
             
 
@@ -686,10 +686,10 @@ def initTypes(earth):
                                                     ('hhSize', np.int8,1),
                                                     ('nKids', np.int8, 1),
                                                     ('hhType', np.int8, 1)],
-                                dynamicProperties = [('income', np.float64, 1),
-                                                    ('expUtil', np.float64, 1),
-                                                    ('util', np.float64, 1),
-                                                    ('expenses', np.float64, 1)])
+                                dynamicProperties = [('income', np.float32, 1),
+                                                    ('expUtil', np.float32, 1),
+                                                    ('util', np.float32, 1),
+                                                    ('expenses', np.float32, 1)])
 
 
     en.PERS = earth.registerAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
@@ -700,19 +700,19 @@ def initTypes(earth):
                                                    ('nJourneys', np.int16, 5),
                                                    ('hhType', np.int8, 1)],
                                dynamicProperties = [('age', np.int8, 1),
-                                                   ('util', np.float64, 1),     # current utility
-                                                   ('commUtil', np.float64, 5), # comunity utility
-                                                   ('selfUtil', np.float64, 5), # own utility at time of action
+                                                   ('util', np.float32, 1),     # current utility
+                                                   ('commUtil', np.float32, 5), # comunity utility
+                                                   ('selfUtil', np.float32, 5), # own utility at time of action
                                                    ('mobType', np.int8, 1),
                                                    ('ageYoungestKid', np.int8,1),
                                                    ('prop', np.float64, 3),
                                                    ('consequences', np.float64, 4),
                                                    ('lastAction', np.int16, 1),
                                                    ('emissions', np.float64, 1),
-                                                   ('costs', np.float64, 1)])
+                                                   ('costs', np.float32, 1)])
 
 
-    en.CON_CC = earth.registerLinkType('cell-cell', CELL, CELL, staticProperties = [('weig', np.float64, 1)])
+    en.CON_CC = earth.registerLinkType('cell-cell', CELL, CELL, staticProperties = [('weig', np.float32, 1)])
     en.CON_CH = earth.registerLinkType('cell-hh', CELL, HH)
     en.CON_HH = earth.registerLinkType('hh-hh', HH,HH)
     en.CON_HP = earth.registerLinkType('hh-pers', HH, PERS)

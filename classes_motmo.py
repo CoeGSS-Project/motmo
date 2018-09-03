@@ -1686,7 +1686,7 @@ class GhostHousehold(GhostAgent):
 
 class Household(Agent, Parallel):
     
-
+    __slots__ = ['loc', 'adults']
         
     def __init__(self, world, **kwProperties):
         Agent.__init__(self, world, **kwProperties)
@@ -1698,7 +1698,7 @@ class Household(Agent, Parallel):
             self.utilFunc = self.CESUtil
         self.computeTime = 0
         
-
+        self.adults = list()
 
     @staticmethod
     def cobbDouglasUtil(x, alpha):
@@ -1706,12 +1706,6 @@ class Household(Agent, Parallel):
         
         for i in range(len(x)):
             utility *= (100.*x[i])**alpha[i] 
-        #if np.isnan(utility) or np.isinf(utility):  ##DEEP_DEBUG
-        #    import pdb                              ##DEEP_DEBUG
-        #    pdb.set_trace()                         ##DEEP_DEBUG
-
-        # assert the limit of utility
-        #assert utility > 0 and utility <= factor     ##DEEP_DEBUG
 
         return utility / 100.
 

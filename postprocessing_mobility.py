@@ -7,15 +7,15 @@ processing records
 @author: geiges, GCF
 """
 
-#import matplotlib as mpl
-#mpl.use('Agg')
+import matplotlib as mpl
+mpl.use('Agg')
 import pandas as pd
 import matplotlib.pyplot as plt
 
 import numpy as np
 import os
 import sys
-import tables as ta
+import h5py
 from os.path import expanduser
 home = expanduser("~")
 import socket
@@ -33,7 +33,7 @@ else:
 #sys.path.append('/home/geiges/database/')
 sys.path.append('modules/')
 import seaborn as sns; sns.set()
-from gcfabm import core, misc
+from abm4py import core, misc
 
 #sns.set_color_codes("dark")
 #sns.color_palette("Paired")
@@ -52,34 +52,34 @@ _hh  = 1
 _pe  = 2
 
 #%% INIT
-#plotFunc.append('plot_globalRecords')
-#plotFunc.append('plotEmissionOverTime')
-#plotFunc.append('plotElectricDemandOverTime')
-#plotFunc.append('plot_globalID')
-#
-#plotFunc.append('plot_emissions')
-#plotFunc.append('plot_electricConsumption')
-#plotFunc.append('plot_ChargingStations')
-#plotFunc.append('plot_GreenConvenienceOverTime')
-#plotFunc.append('plot_stockAllRegions')
-#
-#plotFunc.append('plot_agePerMobType')
+plotFunc.append('plot_globalRecords')
+plotFunc.append('plotEmissionOverTime')
+plotFunc.append('plotElectricDemandOverTime')
+plotFunc.append('plot_globalID')
+
+plotFunc.append('plot_emissions')
+plotFunc.append('plot_electricConsumption')
+plotFunc.append('plot_ChargingStations')
+plotFunc.append('plot_GreenConvenienceOverTime')
+plotFunc.append('plot_stockAllRegions')
+
+plotFunc.append('plot_agePerMobType')
 #plotFunc.append('plot_womanSharePerMobType')
-#plotFunc.append('plot_expectUtil')
-#plotFunc.append('plot_selfUtil')
-#plotFunc.append('plot_carStockBarPlot')
-#plotFunc.append('plot_carSales')
+plotFunc.append('plot_expectUtil')
+plotFunc.append('plot_selfUtil')
+plotFunc.append('plot_carStockBarPlot')
+plotFunc.append('plot_carSales')
 plotFunc.append('plot_properiesPerMobType')
-#plotFunc.append('plot_salesProperties')
-#plotFunc.append('plot_prefPerLabel')
-#plotFunc.append('plot_utilPerLabel')
-#plotFunc.append('plot_greenPerIncome')
-#plotFunc.append('plot_averageIncomePerCell')
-#plotFunc.append('plot_incomePerLabel')
-#plotFunc.append('plot_meanPrefPerLabel')
-#plotFunc.append('plot_meanConsequencePerLabel')
-#plotFunc.append('plot_convOverTime')
-#plotFunc.append('plot_cellMovie')
+plotFunc.append('plot_salesProperties')
+plotFunc.append('plot_prefPerLabel')
+plotFunc.append('plot_utilPerLabel')
+plotFunc.append('plot_greenPerIncome')
+plotFunc.append('plot_averageIncomePerCell')
+plotFunc.append('plot_incomePerLabel')
+plotFunc.append('plot_meanPrefPerLabel')
+plotFunc.append('plot_meanConsequencePerLabel')
+plotFunc.append('plot_convOverTime')
+plotFunc.append('plot_cellMovie')
 plotFunc.append('plot_carsPerCell')
 plotFunc.append('plot_greenCarsPerCell')
 plotFunc.append('plot_conveniencePerCell')
@@ -156,21 +156,21 @@ def loadMisc(path):
 
 def loadData(path, parameters, data,  filters, agTypeID):
 
-    h5file = ta.open_file(path + 'nodeOutput.hdf5', mode = "r")
+    h5file = h5py.File(path + 'nodeOutput.hdf5', mode = "r")
 
     def getData(parameters, agTypeID,timeStep):
 
         dataPath = '/' + str(agTypeID)+ '/' + str(timeStep).zfill(parameters['timeStepMag'])
-        node = h5file.get_node(dataPath)
-        array = node.read()
+        node = h5file.get(dataPath)
+        array = node.value
         
         return array
     
     def getStaticData(parameters, agTypeID):
 
         dataPath = '/' + str(agTypeID)+ '/static' 
-        node = h5file.get_node(dataPath)
-        array = node.read()
+        node = h5file.get(dataPath)
+        array = node.value
         
         return array
     
@@ -326,7 +326,12 @@ class CSVWriter():
     def __init__(self, fileName, columns):
         global relID
         
-        self.fid = open(path + '/' + fileName + '.csv', 'w')
+        self.path = path + '/csv'
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
+        
+        
+        self.fid = open(self.path + '/' + fileName + '.csv', 'w')
         self.fid.write('step, ' + ', '.join(columns) + '\n')
         
     def addData(self, step, data):
@@ -339,22 +344,26 @@ class H5Writer():
     
     def __init__(self, fileName, groupName):
         
-        self.h5File  = ta.File(path + '/' + fileName + '.hdf5', 'a')
+        self.path = path + '/h5'
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
+            
+        self.h5File  = h5py.File(self.path + '/' + fileName + '.hdf5', 'a')
         try:
-            self.h5File.create_group('/',groupName)
+            self.h5File.create_group('/' + groupName)
         except:
             print("failed to create group")
             
-        self.node    = self.h5File.get_node('/' + groupName)
-        
+        self.node    = self.h5File.get('/' + groupName)
+        self.nodePath = '/' + groupName
         
     def addData(self, step, data):
         #self.shape   = data.shape
 #        if step == 134:
 #            print 'data'
 #            print data
-        self.data    = self.h5File.create_array(self.node,'step' + str(step), data)
-        #self.data[step] = data
+        self.data    = self.h5File.create_dataset(self.nodePath + '/step' + str(step), data.shape)
+        self.data = data
         
         
     def close(self):
@@ -368,27 +377,27 @@ def plot_globalRecords(data,  parameters, enums, filters):
 
     reDf = pd.read_csv('resources_ger/regionID_germany.csv',index_col=0)
 
-    import tables as ta
+    #import tables as ta
 
-    h5File  = ta.File(path + '/globals.hdf5', 'r')
-    glob    = h5File.get_node('/glob/')
-    calData = h5File.get_node('/calData/')
-    for data in glob._f_iter_nodes():
+    h5File  = h5py.File(path + '/globals.hdf5', 'r')
+    glob    = h5File.get('/glob/')
+    calData = h5File.get('/calData/')
+    for key, data in glob.items():
         plt.figure()
-        plt.plot(data.read())
+        plt.plot(data.value)
 
-        if 'stock' in data.name and parameters['scenario'] == 7:
+        if 'stock' in key and parameters['scenario'] == 7:
             continue
 
-        if 'stock' in data.name:
-            plt.title(reDf.loc[int(data.name[6:])]['alpha'])
+        if 'stock' in key:
+            plt.title(reDf.loc[int(key[6:])]['alpha'])
         else:
-            plt.title(data.name)
+            plt.title(key)
 
 
-        if data.name in list(calData._v_children.keys()):
-            group = h5File.get_node('/calData/' + data.name)
-            cData = group.read()
+        if key in list(calData.keys()):
+            group = h5File.get('/calData/' + key)
+            cData = group.value
 
             plt.gca().set_prop_cycle(None)
 
@@ -400,11 +409,11 @@ def plot_globalRecords(data,  parameters, enums, filters):
         labelYearsGlob(5)
         if WITHOUTBURNIN:
             plt.xlim([IO_BURN_IN,IO_STEPS])        
-        if 'stock' in data.name:
+        if 'stock' in key:
             plt.yscale('log')
         plt.tight_layout()
-        print("saving file: " + path + data.name)
-        plt.savefig(path + data.name)
+        print("saving file: " + path + key)
+        plt.savefig(path + key)
 
 
 def plotEmissionOverTime(data,  parameters, enums, filters):
@@ -424,7 +433,7 @@ def plotEmissionOverTime(data,  parameters, enums, filters):
 
     if True:
         #%%
-        df = pd.read_csv(path + '/emissions_all.csv', index_col=0)
+        df = pd.read_csv(writer.path + '/emissions_all.csv', index_col=0)
         df.plot.bar(stacked=True, width = 1)
         plt.title('CO2-Emissions from tranport sector in [kg]')
         labelYears(5)
@@ -451,7 +460,7 @@ def plotElectricDemandOverTime(data,  parameters, enums, filters):
 
     if True:
         #%%
-        df = pd.read_csv(path + '/electricDemand_all.csv', index_col=0)
+        df = pd.read_csv(writer.path + '/electricDemand_all.csv', index_col=0)
         df.plot.bar(stacked=True, width = 1)
         plt.title('Electric demand in GWh')
         labelYears(5)
@@ -462,7 +471,7 @@ def plotElectricDemandOverTime(data,  parameters, enums, filters):
 def plot_stockAllRegions(data,  parameters, enums, filters):
 
 
-    h5File  = ta.File(path + '/globals.hdf5', 'r')
+    h5File  = h5py.File(path + '/globals.hdf5', 'r')
     #reDf = pd.read_csv('resources_ger/regionID_germany.csv',index_col=0)
     reDf = pd.read_csv('resources/calDataCV.csv',index_col=0)
     plt.figure(figsize=(24,12))
@@ -470,14 +479,14 @@ def plot_stockAllRegions(data,  parameters, enums, filters):
     log = True
     for i,re in enumerate(parameters['regionIDList']):
         plt.subplot(4,4,i+1)
-        group = h5File.get_node('/glob/stock_' + str(re))
-        data = group.read()
+        group = h5File.get('/glob/stock_' + str(re))
+        data = group.value
         if i ==0:
             hh = plt.plot(data)
         else:
             plt.plot(data)
-        group = h5File.get_node('/calData/stock_' + str(re))
-        cData = group.read()
+        group = h5File.get('/calData/stock_' + str(re))
+        cData = group.value
         plt.gca().set_prop_cycle(None)
         for i in range(1,data.shape[1]):
             plt.plot(cData[:,0], cData[:,i],'o')
@@ -741,8 +750,8 @@ def plot_carSharePerHHType(data,  parameters, enums, filters):
             plt.xlim([0,IO_STEPS])
         plt.ylim([0, np.sum(carMat[ti,:])])
         plt.title(titles[hhType-1])
-        if parameters['plotYears']:
-            labelYears(5)
+        #if parameters['plotYears']:
+        labelYears(5)
     #plt.legend(legStr,bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
     plt.subplot(3,4,hhType+1)
     
@@ -770,7 +779,7 @@ def plot_carStockBarPlot(data,  parameters, enums, filters):
     
     plt.figure()
     enums   = misc.loadObj(path + 'enumerations')
-    #df = pd.read_csv(path +  'rec/' + 'carStock.csv', index_col=0)
+    #df = pd.read_csv(writer.path +  'rec/' + 'carStock.csv', index_col=0)
     #NSTEPS = agMat.shape[0]
     nCars = np.zeros(IO_STEPS)
     colorPal =  sns.color_palette("Set3", n_colors=len(list(enums['mobilityTypes'].values())), desat=.8)
@@ -821,21 +830,43 @@ def plot_properiesPerMobType(data,  parameters, enums, filters):
     """
     consequences per mobility type
     """
+#    fig = plt.figure()
+#    res = np.zeros([IO_STEPS,len(enums['mobilityTypes']), len(enums['properties'])])
+#    for i in range(3):
+#        
+#        for ti in range(IO_STEPS):
+#            for carLabel in range(len(enums['mobilityTypes'])):
+#                idx = data.pe['lastAction'][ti] == 0
+#                res[ti, carLabel] = np.mean(data.pe['prop'][ti,idx],axis=0)
+#        legStr = list()
+#        for label in range(len(enums['mobilityTypes'])):
+#            legStr.append(enums['mobilityTypes'][label])
+#
+#        plt.plot(res[:,:,i])
+#        plt.title('Average ' + enums['properties'][i+1])
+#
+#        if WITHOUTBURNIN:
+#            plt.xlim([IO_BURN_IN,IO_STEPS])
+#        labelYears(5)
+#    plt.subplots_adjust(top=0.96,bottom=0.14,left=0.04,right=0.96,hspace=0.45,wspace=0.1)
+#    plt.legend(list(enums['mobilityTypes'].values()),loc=0)
+#    plt.tight_layout()
+#    plt.savefig(path + 'propertiesPerMobType')
+#plt.show()
     fig = plt.figure()
     res = np.zeros([IO_STEPS,len(enums['mobilityTypes']), len(enums['properties'])])
-    for i in range(3):
+    
+    for carLabel in range(len(enums['mobilityTypes'])):
+        mask = (data.pe['lastAction'] == 0) & (data.pe['mobType'] == carLabel)
+        tmp = np.zeros([*mask.shape, 3]) * np.nan
+        tmp[mask, :] = data.pe['prop'][mask]
+        res[:, carLabel,:] =np.nanmean(tmp,axis=1)
+    
+    for i in range(3):    
         plt.subplot(3,1,i+1)
-        for ti in range(IO_STEPS):
-            for carLabel in range(len(enums['mobilityTypes'])):
-                idx = data.pe['lastAction'][ti] == carLabel
-                res[ti, carLabel] = np.mean(data.pe['prop'][ti,idx],0)
-        legStr = list()
-        for label in range(len(enums['mobilityTypes'])):
-            legStr.append(enums['mobilityTypes'][label])
-
         plt.plot(res[:,:,i])
         plt.title('Average ' + enums['properties'][i+1])
-
+    
         if WITHOUTBURNIN:
             plt.xlim([IO_BURN_IN,IO_STEPS])
         labelYears(5)
@@ -843,8 +874,6 @@ def plot_properiesPerMobType(data,  parameters, enums, filters):
     plt.legend(list(enums['mobilityTypes'].values()),loc=0)
     plt.tight_layout()
     plt.savefig(path + 'propertiesPerMobType')
-#plt.show()
-
 
 def plot_salesProperties(data,  parameters, enums, filters):
     plt.figure(figsize=[15,10])
@@ -1825,28 +1854,28 @@ if __name__ == "__main__":
         tt = time.time()
         if doTry:
             
-#            try:
+            try:
 #                plt.close('all')
 #                plt.clf()
 #                print('Executing: ' + funcCall + '...', end=' ')
-            locals()[funcCall](data,  parameters, enums, filters)
+                locals()[funcCall](data,  parameters, enums, filters)
                 
                 
-#            except Exception as e:
+            except Exception as e:
 #                #import pdb
 #                
-#                print('failed to plot: ' + funcCall)
-#                print(e)
+                print('failed to plot: ' + funcCall)
+                print(e)
 #                
-#                import traceback
-#                traceback.print_exc()
+                import traceback
+                traceback.print_exc()
 #                #pdb.set_trace()
         else:
             plt.close('all')
             plt.clf()
             print('Executing: ' + funcCall + '...', end=' ')
             locals()[funcCall](data,  parameters, enums, filters)
-        print(' done in ' + str(time.time() - tt) + ' s')
+        print(str(funcCall) + ' done in ' + str(time.time() - tt) + ' s')
     print('All done')
     
 #%%

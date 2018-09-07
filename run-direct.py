@@ -32,14 +32,14 @@ import numpy as np
 #np.random.seed(seed=1)
 
 import init_motmo as init
-from gcfabm import core
+from abm4py import core
 
 print('Rank ' +str(core.mpiRank) + ' of ' + str(core.mpiSize))
 
 debug = True
 showFigures = 0
 
-stopAt2008 = False
+stopAt2008 = 0
 
 comm    = core.comm
 mpiRank = core.mpiRank

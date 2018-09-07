@@ -25,10 +25,23 @@ You should have received a copy of the GNU General Public License
 along with GCFABM.  If not, see <http://earth.gnu.org/licenses/>.
 
 
+Copyright (c) 2018, Global Climate Forun e.V. (GCF)
+
+This program is free software: you can redistribute it and/or modify it 
+under the terms of the GNU Lesser General Public License as published 
+by the Free Software Foundation, version 3 only.
+
+This program is distributed in the hope that it will be useful, 
+but WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+GNU Lesser General Public License for more details.
+You should have received a copy of the GNU Lesser General Public License 
+along with this program. If not, see <http://www.gnu.org/licenses/>. 
+GNU Lesser General Public License version 3 (see the file LICENSE).
 """
 #%% IMPORT 
 
-import sys, os, socket
+import sys
 import matplotlib.pyplot as plt
 import csv
 import time
@@ -37,12 +50,11 @@ import logging as lg
 import numpy as np
 import pandas as pd
 from scipy import signal
-from numba import njit
-import math
 
-sys.path.append('../gcfabm')
+
+sys.path.append('../abm4py')
 from classes_motmo import Person, GhostPerson, Household, GhostHousehold, Cell, GhostCell, Earth, Opinion
-from gcfabm import core
+from abm4py import core
 import scenarios
 
 print('import done')
@@ -97,7 +109,7 @@ en.PERS   = 3
 #    math.exp( - (density - pa['muConvB'])**2 / (2 * pa['sigmaConvB']**2))
 #    return conv
 #
-##    @njit
+##    ###@njit
 #def convenienceGreen(density, pa, kappa, cell):
 #    minValue = (1 - kappa) * pa['minConvGInit'] + kappa * pa['minConvG']
 #    maxValue = (1 - kappa) * pa['maxConvGInit'] + kappa * pa['maxConvG']
@@ -110,13 +122,13 @@ en.PERS   = 3
 #    
 #    return conv
 #
-##    @njit
+##    ###@njit
 #def conveniencePublicLeuphana(density, pa, kappa, cell):
 #    
 #    currKappa   = (1 - kappa) * pa['maxConvGInit'] + kappa * pa['maxConvG']
 #    return pa['conveniencePublic'][cell._node['coord']] * currKappa
 #
-##    @njit
+##    ###@njit
 #def conveniencePublic(density, pa, kappa, cell):
 #    conv = pa['minConvP'] + \
 #            ((pa['maxConvP'] - pa['minConvP']) * (kappa)) * \
@@ -125,7 +137,7 @@ en.PERS   = 3
 #    
 #    return conv
 #
-##    @njit
+##    ###@njit
 #def convenienceShared(density, pa, kappa, cell):
 #    
 #    conv = (kappa/10.) + pa['minConvS'] + (kappa *(pa['maxConvS'] - pa['minConvS'] - (kappa/10.))  +\
@@ -134,7 +146,7 @@ en.PERS   = 3
 #                pa['sigmaConvSInit'] + (kappa * pa['sigmaConvS']))**2) )        
 #    return conv
 #  
-##    @njit
+##    ###@njit
 #def convenienceNone(density, pa, kappa, cell):
 #    conv = pa['minConvN'] + \
 #            ((pa['maxConvN'] - pa['minConvN']) * (kappa)) * \
@@ -147,7 +159,7 @@ def mobilitySetup(earth):
     parameters = earth.getParameters()
 
     # define convenience functions
-#    @njit
+#    ###@njit
     from collections import OrderedDict
     def parameter2Dict(parameters, mobStr):
         convDict = OrderedDict()

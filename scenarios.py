@@ -31,7 +31,7 @@ from scipy import signal
 
 
 import init_motmo as init
-from gcfabm import core
+from abm4py import core
 
 mpiSize = core.mpiSize
 def convolutionMatrix(radius, centerWeight):
@@ -110,7 +110,7 @@ def scenarioTestSmall(parameterInput, dirPath):
     nCells = np.sum(setup.landLayer)
     setup.population = np.zeros(setup.landLayer.shape)
     setup.population[setup.landLayer==1] = np.random.choice(popCountList, nCells)
-    
+    setup.cityPopSize = setup.population
     setup.mpiRankLayer = setup.landLayer.astype(float).copy()
     setup.mpiRankLayer[setup.landLayer == 0] = np.nan
     
@@ -225,7 +225,7 @@ def scenarioTestMedium(parameterInput, dirPath):
     setup.recAgent = []       # reporter agents that return a diary
 
     # output
-    setup.writeAgentFile = 0
+    setup.writeAgentFile = 1
     setup.writeLinkFile = 0
     setup.writeNPY = 1
     setup.writeCSV = 0
@@ -340,10 +340,14 @@ def scenarioNBH(parameterInput, dirPath):
     setup.update(parameterInput.toDict())
 
 
-    for paName in ['techExpBrown', 'techExpGreen', 'techExpPublic', 'techExpShared', 'techExpNone',
-                   'population']:
-        setup[paName] /= setup['reductionFactor']
+    for paName in ['techExpBrown',
+                   'techExpGreen',
+                   'techExpPublic',
+                   'techExpShared',
+                   'techExpNone']:
+        setup[paName] /= setup['reductionFactor'] * setup.spatialRedFactor
 
+    setup['population'] /= setup['reductionFactor']
     return setup
 
 def scenarioGer(parameterInput, dirPath):

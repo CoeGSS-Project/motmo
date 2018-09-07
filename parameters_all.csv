@@ -1,20 +1,21 @@
 name,value,doSweep,minRange,maxRange,comment
-linearCharging,1,0,,,"# if set to 1 charging develops lineaer after 2020"
+linearCharging,0,0,,,"# if set to 1 charging develops lineaer after 2020"
 hhAcceptFactor,1,0,,,
-maxGreenDigital,0.,,,
+greenDigital,1.,,,
+brownDigital,1.,,,
 homeChargConv,0.05,1,0.,.2, # convenience of home charging (with zero charging stations)
 techExpBrown,20000000000,1,18000000000,22000000000,"# inertial experience of brown"
-techExpGreen,300000000,1,270000000,330000000,"# inertial experience of green"
-techExpPublic,3000000000,1,2250000000,3750000000,"# inertial experience of other"
-techExpShared,1000000000,1,750000000,1250000000,"# inertial experience of other"
-techExpNone,3000000000,1,2250000000,3750000000,"# inertial experience of other"
+techExpGreen,  300000000,1,270000000,330000000,"# inertial experience of green"
+techExpPublic,1000000000,1,2250000000,3750000000,"# inertial experience of other"
+techExpShared, 500000000,1,750000000,1250000000,"# inertial experience of other"
+techExpNone,  9000000000,1,2250000000,3750000000,"# inertial experience of other"
 "################# Mobility types ############################",,,,,
 "################# BROWN          ############################",,,,,
 initEmBrown,206.7,,,,"# initial emissions of combustion engine car"
 initPriceBrown,450,1,360,540,"# initial price of combution engine car"
-initOperatingCostsBrown,0.1,1,0.08,0.12,"# operating costs for brown cars"
+initOperatingCostsBrown,0.09828,1,0.08,0.12,"# operating costs for brown cars"
 priceReductionB,-3.45960751,,,,"# price reduction through experience (brown)"
-priceRedBCorrection,0.15,,,,"# correction due to weight and comfort"
+priceRedBCorrection,0.07,,,,"# correction due to weight and comfort"
 emReductionB,-0.894311327388,,,,"# emission reduction through experience (brown)"
 emFactorB,9.20569967051,,,,"# emission factor (brown)"
 emLimitB,0.058279616211,,,,"# emission limit (brown) gCO2 per kg car per km"

@@ -32,7 +32,7 @@ import pandas as pd
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 #import classes_motmo as motmo
-from gcfabm import core
+from abm4py import core
 import random
 doPlot = True
 

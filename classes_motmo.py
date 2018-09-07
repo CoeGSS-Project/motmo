@@ -25,10 +25,11 @@ You should have received a copy of the GNU General Public License
 along with GCFABM.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from gcfabm import core
+from abm4py import core
 
-from gcfabm import World, Agent, GhostAgent, Location, GhostLocation
-from gcfabm.traits import Parallel
+from abm4py import World, Agent, GhostAgent, Location, GhostLocation
+from abm4py.traits import Parallel
+import misc_motmo as misc
 
 #import pdb
 #import igraph as ig
@@ -76,53 +77,7 @@ NONE   = 4
 
 
 #%% --- Global classes ---
-from numba import njit
 
-@njit("f8 (f8[:], f8[:])",cache=True)
-def cobbDouglasUtilNumba(x, alpha):
-    utility = 1.
-    
-    for i in range(len(x)):
-        utility = utility * (100.*x[i])**alpha[i] 
-    #if np.isnan(utility) or np.isinf(utility):  ##DEEP_DEBUG
-    #    import pdb                              ##DEEP_DEBUG
-    #    pdb.set_trace()                         ##DEEP_DEBUG
-
-    # assert the limit of utility
-    #assert utility > 0 and utility <=  100.     ##DEEP_DEBUG
-    
-    
-    return utility / 100.
-
-@njit("f8[:] (f8[:])",cache=True)
-def normalize(array):
-    return  array / np.sum(array)
-
-@njit(cache=True)
-def sum1D(array):
-    return np.sum(array)
-
-@njit(cache=True)
-def sumSquared1D(array):
-    return np.sum(array**2)
-
-@njit(cache=True)
-def prod1D(array1, array2):
-    return np.multiply(array1,array2)
-
-@njit(cache=True)
-def normalizedGaussian(array, center, errStd):
-    diff = (array - center) +  np.random.randn(array.shape[0])*errStd
-    normDiff = np.exp(-(diff**2.) / (2.* errStd**2.))  
-    return normDiff / np.sum(normDiff)
-
-@njit(cache=True)
-def convenienceFunction(minValue, maxValue, delta, mu, twoSigmaSquare, density):
-    return  minValue + delta * math.exp(-(density - mu)**2 / twoSigmaSquare)
-
-@njit(cache=True)
-def convenienceFunctionArray(minValue, maxValue, delta, mu, twoSigmaSquare, density):
-    return  minValue + delta * np.exp(-(density - mu)**2 / twoSigmaSquare)
 
 class Earth(World):
 
@@ -344,12 +299,13 @@ class Earth(World):
         self.computeTime[self.time] += time.time()-ttComp
 
 
-    def digitalization(self):
+    def brownDigitalModel(self):
         # digitilization parameter
         timeStep2035 = ((2035 - self.para['startDate'][1])*12) + self.para['burnIn']
         x = self.timeStep
-        self.greenDigital = x**3/np.max(timeStep2035**3) * self.para['maxGreenDigital']
-
+        self.brownDigital = x**2/np.max(timeStep2035**2) * self.para['brownDigital']
+        
+        self.market.greenDigital = self.greenDigital
         def getConvenienceParameters(comvDict, kappa):
 
             minValue = (1 - kappa) * comvDict['minInit'] + kappa * comvDict['minFinal']
@@ -365,9 +321,54 @@ class Earth(World):
 
         convDict = dict()
         convDict['minInit'] = 0
-        convDict['minFinal'] = .02
+        convDict['minFinal'] = .05
         convDict['maxInit'] = 0.
-        convDict['maxFinal']  = .058
+        convDict['maxFinal']  = .1
+        convDict['muInit'] = 0
+        convDict['muFinal']  = 0
+        convDict['sigmaInit'] = 2000
+        convDict['sigmaFinal'] = 2000
+        
+        digConv[BROWN] = getConvenienceParameters(convDict, self.brownDigital)
+        
+        convDict = dict()
+        convDict['minInit'] = 0
+        convDict['minFinal'] = -.01
+        convDict['maxInit'] = 0.
+        convDict['maxFinal']  = -.05
+        convDict['muInit'] = 0
+        convDict['muFinal']  = 0
+        convDict['sigmaInit'] = 1500
+        convDict['sigmaFinal'] = 2000
+        
+        digConv[PUBLIC] = getConvenienceParameters(convDict, self.brownDigital)
+        
+        return digConv
+    
+    def greenDigitalModel(self):
+        # digitilization parameter
+        timeStep2035 = ((2035 - self.para['startDate'][1])*12) + self.para['burnIn']
+        x = self.timeStep
+        self.greenDigital = x**2/np.max(timeStep2035**2) * self.para['greenDigital']
+        self.market.greenDigital = self.greenDigital
+        def getConvenienceParameters(comvDict, kappa):
+
+            minValue = (1 - kappa) * comvDict['minInit'] + kappa * comvDict['minFinal']
+            maxValue = (1 - kappa) * comvDict['maxInit'] + kappa * comvDict['maxFinal']
+            
+            delta    = kappa * (maxValue - minValue)
+            sigma = (1 - kappa) * comvDict['sigmaInit'] + kappa * comvDict['sigmaFinal']
+            mu    = (1 - kappa) * comvDict['muInit'] + kappa * comvDict['muFinal'] 
+            
+            return [minValue, maxValue, delta, mu, 2*sigma**2]
+        
+        digConv = dict()    
+
+        convDict = dict()
+        convDict['minInit'] = 0
+        convDict['minFinal'] = .05
+        convDict['maxInit'] = 0.
+        convDict['maxFinal']  = .1
         convDict['muInit'] = 4000
         convDict['muFinal']  = 3800
         convDict['sigmaInit'] = 1000
@@ -389,13 +390,13 @@ class Earth(World):
         
         convDict = dict()
         convDict['minInit'] = 0
-        convDict['minFinal'] = .01
+        convDict['minFinal'] = .05
         convDict['maxInit'] = 0.
-        convDict['maxFinal']  = .05
+        convDict['maxFinal']  = .25
         convDict['muInit'] = 4000
         convDict['muFinal']  = 3500
         convDict['sigmaInit'] = 400
-        convDict['sigmaFinal'] = 1000
+        convDict['sigmaFinal'] = 1500
         
         digConv[SHARED] = getConvenienceParameters(convDict, self.greenDigital)
         
@@ -421,10 +422,11 @@ class Earth(World):
         if self.time > self.para['burnIn']:
             self.chargingInfra.step(self)
 
-            digitaliationConvDict =  self.digitalization()
+            greenDigiConv = self.greenDigitalModel()
+            brownDigiConv = self.brownDigitalModel()
         else:
-            digitaliationConvDict = dict()
-
+            greenDigiConv = dict()
+            brownDigiConv = dict()
         # proceed market in time
         # stf: sollte das nicht eher am Ende des steps aufgerufen
         # werden? z.b. passiert bei updateTechnologicalProgress nichts
@@ -440,12 +442,22 @@ class Earth(World):
         #convenience calculation for all cells
         
         for i, good in enumerate(self.market.goods.values()):
-            if i in digitaliationConvDict:
-                lambdaFunc = lambda a: convenienceFunctionArray(*good.convenienceParameter, a['popDensity']) + \
-                                       convenienceFunctionArray(*digitaliationConvDict[i], a['popDensity'])
+            
+            lambdaFunc = lambda a: misc.convenienceFunctionArray(*good.convenienceParameter, a['popDensity'])
+            
+            if i in greenDigiConv:
+                lambdaGreen = lambda agent: misc.convenienceFunctionArray(*greenDigiConv[i], agent['popDensity'])
             else:
-                lambdaFunc = lambda a: convenienceFunctionArray(*good.convenienceParameter, a['popDensity'])
-            self.setAttrsForTypeVectorized(1, 'convenience', lambdaFunc, idx=i)
+                lambdaGreen = lambda agent: 0
+            
+            if i in brownDigiConv:
+                lambdaBrown = lambda agent: misc.convenienceFunctionArray(*brownDigiConv[i], agent['popDensity'])
+            else:
+                lambdaBrown = lambda agent: 0
+                
+            lambdaFuncTotal = lambda a: lambdaFunc(a) + lambdaGreen(a) + lambdaBrown(a) 
+                                       
+            self.setAttrsForTypeVectorized(1, 'convenience', lambdaFuncTotal, idx=i)
             
         for cell in self.random.shuffleAgentsOfType(CELL):
             cell.step(self.para)
@@ -640,16 +652,18 @@ class Good():
                 else:
                     exp = market.experienceBrownExo[yearIdx]
                 expIn10Mio = exp/10000000.
+                
                 emissionsPerKg = self.paras['emFactor'] * expIn10Mio**(self.paras['emRed']) + self.paras['emLimit']
                 maturity = self.paras['emLimit'] / emissionsPerKg + correctionFactor
                 emissions = emissionsPerKg * weight
+                
                 return  emissions, maturity
                 
         elif self.label == 'green':
             def emissionFn(self, market):                  
                 weight = self.paras['weight']
-                electrProdFactor = 1.                   # CO2 per KWh compared to 2007, 2Do?
-                yearIdx = max(0, market.time-market.burnIn) #int((market.time - market.burnIn)/12.)                
+                electrProdFactor = 1.                       # CO2 per KWh compared to 2007, 2Do?
+                yearIdx = max(0, market.time-market.burnIn) # int((market.time - market.burnIn)/12.)                
                 if market.germany:
                     exp = market.experienceGreenExo[yearIdx] + self.experience
                 else:
@@ -658,7 +672,8 @@ class Good():
                 maturity = self.paras['emLimit']/emissionsPerKg
                 emissions = emissionsPerKg * weight * electrProdFactor
                 return emissions, maturity
-                    
+                
+            
         elif self.label == 'public':
             def emissionFn(self, market):
                 emissions2012 = market.para['initEmPublic'] - 8. # corrected to match value of 2012
@@ -955,7 +970,7 @@ class Market():
                 good.properties['fixedCosts'] = self.para['initPriceBrown']
                 expInMio = self.experienceBrownStart/1000000.       
                 good.priceFactor   = good.properties['fixedCosts'] / (expInMio**exponent)
-                good.properties['operatingCosts'] = self.para['initOperatingCostsGreen']  # 0.1
+                good.properties['operatingCosts'] = self.para['initOperatingCostsBrown']  # 0.1
                 
             elif good.label == 'green':                 
                 exponent = self.para['priceReductionG'] * self.para['priceRedGCorrection']          
@@ -970,11 +985,11 @@ class Market():
                  
             elif good.label == 'shared':
                 good.properties['fixedCosts'] = self.para['initPriceShared']
-                good.properties['operatingCosts'] = self.para['initOperatingCostsGreen']  # 0.45
+                good.properties['operatingCosts'] = self.para['initOperatingCostsShared']  # 0.45
                 
             else:
                 good.properties['fixedCosts'] = self.para['initPriceNone']
-                good.properties['operatingCosts'] = self.para['initOperatingCostsGreen'] 
+                good.properties['operatingCosts'] = self.para['initOperatingCostsNone'] 
   
     
     def updatePrices(self):
@@ -1000,14 +1015,14 @@ class Market():
 
                 expInMio = exp/1000000.       
                 good.properties['fixedCosts'] = factor * expInMio**exponent 
+                good.properties['operatingCosts'] = self.para['initOperatingCostsGreen'] - ((.1 * self.greenDigital) * self.para['initOperatingCostsGreen'])
                 
             elif good.label == 'public':
                 if self.date[1] > 2017:
                     good.properties['fixedCosts'] *= .99**(1./12)
                     
             elif good.label == 'shared':
-                if good.properties['fixedCosts'] > 0.8*min(self.goods[0].properties['fixedCosts'],self.goods[1].properties['fixedCosts']) :
-                    good.properties['fixedCosts'] = 0.8*min(self.goods[0].properties['fixedCosts'],self.goods[1].properties['fixedCosts'])
+                good.properties['operatingCosts'] = self.para['initOperatingCostsShared'] - ((.1 * self.greenDigital) * self.para['initOperatingCostsShared'])
 
         
     def ecology(self, emissions):      
@@ -1071,7 +1086,7 @@ class Market():
         self.time += 1
 
     def computeInnovation(self):
-        self.innovation = 1 - (normalize(np.asarray(self.getCurrentExperience()))**.5)
+        self.innovation = 1 - (misc.normalize(np.asarray(self.getCurrentExperience()))**.5)
         
     def registerGood(self, label, propDict, convDict, initTimeStep, **kwProperties):
         """
@@ -1154,7 +1169,7 @@ class Infrastructure():
         # normalizing as probablity
         self.potentialMap[np.isnan(self.potentialMap)] = 0
         self.potentialMap = self.potentialMap / np.nansum(self.potentialMap)
-        self.potentialMap = normalize(self.potentialMap)
+        self.potentialMap = misc.normalize(self.potentialMap)
         # share of new stations that are build in the are of this process
         self.shareStationsOfProcess = np.sum(potMap[earth.cellMapIds]) / np.nansum(potMap)
         if np.isnan(self.shareStationsOfProcess):
@@ -1310,7 +1325,7 @@ class Infrastructure():
 # %% --- entity classes ---
 class Person(Agent, Parallel):
     
-    __slots__ = ['loc', 'hh']
+    #__slots__ = ['loc', 'hh']
     
     def __init__(self, world, **kwProperties):
         Agent.__init__(self, world, **kwProperties)
@@ -1341,12 +1356,12 @@ class Person(Agent, Parallel):
         friendUtil = commUtilPeers[:,self.attr['mobType']]
         ownUtil    = self.attr['util']
 
-        evidence = normalizedGaussian(friendUtil, ownUtil, world.para['utilObsError'])
+        evidence = misc.normalizedGaussian(friendUtil, ownUtil, world.para['utilObsError'])
         #prior = normalize(weights)
         assert not any(np.isnan(weights)) ##OPTPRODUCTION
-        post = normalize(weights * evidence)
+        post = misc.normalize(weights * evidence)
         
-        sumWeights = sum1D(post)
+        sumWeights = misc.sum1D(post)
         if not(np.isnan(sumWeights) or np.isinf(sumWeights)):
             if sumWeights > 0:
                 self.setAttrOfLink('weig', post, liTypeID=CON_PP)
@@ -1594,7 +1609,7 @@ class Person(Agent, Parallel):
                 lg.info('Warning for utilPeers:')
                 lg.info(str(utilPeers))
             # weight of the fitness (quality) of the memes
-            sumUtilPeers = sum1D(utilPeers)
+            sumUtilPeers = misc.sum1D(utilPeers)
             if sumUtilPeers > 0:
                 w_fitness = utilPeers / sumUtilPeers
             else:
@@ -1606,7 +1621,7 @@ class Person(Agent, Parallel):
             # combination of weights for random drawing
 #            w_full = w_fitness * w_reliability 
 #            w_full = w_full / np.sum(w_full)
-            w_full = normalize(prod1D(w_fitness,weights))  
+            w_full = misc.normalize(misc.prod1D(w_fitness,weights))  
             self.imitation =  np.unique(np.random.choice(mobTypePeers, 2, p=w_full))
             #print(1)
 
@@ -1686,14 +1701,14 @@ class GhostHousehold(GhostAgent):
 
 class Household(Agent, Parallel):
     
-    __slots__ = ['loc', 'adults']
+    #__slots__ = ['loc', 'adults']
         
     def __init__(self, world, **kwProperties):
         Agent.__init__(self, world, **kwProperties)
         Parallel.__init__(self, world, **kwProperties)
 
         if world.getParameters()['util'] == 'cobb':
-            self.utilFunc = cobbDouglasUtilNumba
+            self.utilFunc = misc.cobbDouglasUtilNumba
         elif world.getParameters()['util'] == 'ces':
             self.utilFunc = self.CESUtil
         self.computeTime = 0
@@ -1907,7 +1922,7 @@ class Household(Agent, Parallel):
             consMat[ix,:,ECO] = earth.market.ecologyVectorized(mobProperties[actions,EMISSIONS])
             
             #money
-            consMat[ix,:,MON] = max(1e-5, 1 - (sum1D(mobProperties[actions,FIXEDCOSTS]) + averDist*sum1D(mobProperties[actions,OPERATINGCOSTS])) / income)
+            consMat[ix,:,MON] = max(1e-5, 1 - (misc.sum1D(mobProperties[actions,FIXEDCOSTS]) + averDist*misc.sum1D(mobProperties[actions,OPERATINGCOSTS])) / income)
             
             #immitation
             consMat[ix,:,INNO] = earth.market.innovation[actions]
@@ -2116,7 +2131,7 @@ class Household(Agent, Parallel):
     def propUtilChoice(self, combActions, overallUtil):
 #        weig = np.asarray(overallUtil) - np.min(np.asarray(overallUtil))
 #        weig =weig / np.sum(weig)
-        weig = normalize(np.asarray(overallUtil) - np.min(np.asarray(overallUtil)))
+        weig = misc.normalize(np.asarray(overallUtil) - np.min(np.asarray(overallUtil)))
         propActionIdx = np.random.choice(list(range(len(weig))), p=weig)
         actions = combActions[propActionIdx]
         # return persons that buy a new car (action is not -1)
@@ -2272,7 +2287,7 @@ class Household(Agent, Parallel):
         if doCheckMobAlternatives:
             actionTaken = self.bestMobilityChoice(earth, persGetInfoList)
             self.calculateConsequences(earth.market)
-            util = self.evalUtility(earth, actionTaken)
+            self.evalUtility(earth, actionTaken)
             #self.evalExpectedUtility(earth, [True] * len(self.adults))
 
         self.computeTime += time.time() - tt
@@ -2291,17 +2306,13 @@ class Reporter(Household):
 
 class Cell(Location, Parallel):
 
+    #__slots__ = ['hhList', 'peList']
     def __init__(self, earth, **kwProperties):
         kwProperties.update({'population': 0, 'convenience': [0.,0.,0.,0.,0.], 'carsInCell':[0,0,0,0,0], 'regionId':0})
         Location.__init__(self, earth, **kwProperties)
         Parallel.__init__(self, earth, **kwProperties)
         self.hhList = list()
         self.peList = list()
-        self.carsToBuy = 0
-        self.deleteQueue =1
-        self.cellSize      = 1.
-        self.convFunctions = list()
-        self.redFactor     = earth.para['reductionFactor']
 
     def convenienceFunction(self, pa, kappa, density):
         return  pa['minValue'] + kappa * pa['delta'] * math.exp(-(density - pa['mu'])**2 / pa['2sigmaSquare'])
@@ -2313,8 +2324,8 @@ class Cell(Location, Parallel):
 
         connectedNodes =  self.getPeerIDs(liTypeID=CON_LL)
         
-        self.weights = self.getAttrOfLink('weig',liTypeID=CON_LL)
-        return self.weights, connectedNodes
+        weights = self.getAttrOfLink('weig',liTypeID=CON_LL)
+        return weights, connectedNodes
 
 
 
@@ -2375,7 +2386,7 @@ class Cell(Location, Parallel):
 
         popDensity = np.float(self.attr['popDensity'])
         
-        convAll = [convenienceFunction(*convParamerter, popDensity) for convParamerter in convParaList]
+        convAll = [misc.convenienceFunction(*convParamerter, popDensity) for convParamerter in convParaList]
             
         homeChargingConv = parameters['homeChargConv']
         #convenience of electric mobility is additionally dependen on the infrastructure
@@ -2383,7 +2394,7 @@ class Cell(Location, Parallel):
 
         return convAll
 
-    def electricInfrastructure(self, greenMeanCars = None):
+    def electricInfrastructure(self, parameters, greenMeanCars = None):
         """ 
         Method for a more detailed estimation of the convenience of 
         electric intrastructure.
@@ -2402,14 +2413,14 @@ class Cell(Location, Parallel):
         
         if greenMeanCars is None:
             
-            carsInCells   = self.getAttrOfPeers('carsInCell',CON_LL) * self.redFactor
-            greenMeanCars = sum1D(carsInCells[:,GREEN]*weights)    
+            carsInCells   = self.getAttrOfPeers('carsInCell',CON_LL) * parameters['reductionFactor']
+            greenMeanCars = misc.sum1D(carsInCells[:,GREEN]*weights)    
         
 
         
         
         # part of the convenience that is related to the capacity that is used
-        avgStatPerCell = sum1D(nStation *  weights)
+        avgStatPerCell = misc.sum1D(nStation *  weights)
         
         capacityUse = greenMeanCars / (avgStatPerCell * 200.)
         
@@ -2464,7 +2475,7 @@ class Cell(Location, Parallel):
 
         homeChargingConv = parameters['homeChargConv']
         #convenience of electric mobility is additionally dependen on the infrastructure
-        self.attr['convenience'][GREEN] *= homeChargingConv + (self.electricInfrastructure() * (1.-homeChargingConv))
+        self.attr['convenience'][GREEN] *= homeChargingConv + (self.electricInfrastructure(parameters) * (1.-homeChargingConv))
 
 
 
@@ -2544,6 +2555,7 @@ class Opinion():
         elif income > 2 * self.minIncomeEco:
             if random.random() > 0.8:
                 ce+=4.
+        
         ce += cityPopSize / 1e6
 
         ce = float(ce)**2

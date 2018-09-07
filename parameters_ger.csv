@@ -1,8 +1,8 @@
 name,value,doSweep,minRange,maxRange,comment
 scenario,6,,,,"# selection of the scenario setup"
 nSteps,460,,,,"# number of simulation steps"
-burnIn,50,,,,"# number of burn in time steps"
-ioSteps,12,,,,"#number of steps after when the IO writen to file"
+burnIn,100,,,,"# number of burn in time steps"
+ioSteps,1,,,,"#number of steps after when the IO writen to file"
 burnInTimeFactor,1,,,,"# time factor that increases time speed in"
 omniscientBurnIn,0,,,,"# number of omiscient agent time steps"
 utilObsError,50,,,,"# observation error to compare utilities"

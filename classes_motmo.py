@@ -32,7 +32,7 @@ from abm4py.traits import Parallel
 import misc_motmo as misc
 
 #import pdb
-#import igraph as ig
+#import ._graph as ig
 import numpy as np
 import time
 import os
@@ -106,7 +106,6 @@ class Earth(World):
                        maxNodes=maxNodes,
                        maxLinks=maxLinks,
                        debug=debug,
-                       mpiComm=mpiComm,
                        agentOutput=agentOutput,
                        linkOutput=linkOutput)
 
@@ -164,21 +163,21 @@ class Earth(World):
             weigList += weights
             populationList.append(agent.loc.attr['population'])
         
-        timePerAgent =  (time.time() - tt ) / self.nAgents(agTypeID)
+        timePerAgent =  (time.time() - tt ) / self.countAgents(agTypeID)
         print('Average generation time per agent: {:3.4f}'.format(timePerAgent))
         
         ttx = time.time()
-        self.addLinks(eTypeID=liTypeID, sources=sourceList, targets=targetList, weig=weigList)
+        self.addLinks(eTypeID=liTypeID, sourceIDs=sourceList, targetIDs=targetList, weig=weigList)
         lg.info( 'Connections added in -- ' + str( time.time() - ttx) + ' s')
 
         lg.info( 'Social network created in -- ' + str( time.time() - tt) + ' s')
-        lg.info( 'Average population: ' + str(np.mean(populationList)) + ' - Ecount: ' + str(self.graph.eCount()))
+        lg.info( 'Average population: ' + str(np.mean(populationList)) + ' - Ecount: ' + str(self._graph.eCount()))
 
         fid = open(self.para['outPath']+ '/initTimes.out', 'a')
         fid.writelines('r' + str(core.mpiRank) + ', ' +
                        str( time.time() - tt) + ',' +
                        str(np.mean(populationList)) + ',' +
-                       str(self.graph.eCount()) + '\n')
+                       str(self._graph.eCount()) + '\n')
 
     def updateRecords(self):
         """
@@ -212,15 +211,15 @@ class Earth(World):
         Encapsulating method for the sync of global variables
         """
         ttSync = time.time()
-        self.graph.glob.updateLocalValues('meanEmm', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,EMISSIONS])
-        self.graph.glob.updateLocalValues('stdEmm', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,EMISSIONS])
-        self.graph.glob.updateLocalValues('meanFiC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,FIXEDCOSTS])
-        self.graph.glob.updateLocalValues('stdFiC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,FIXEDCOSTS])
-        self.graph.glob.updateLocalValues('meanOpC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,OPERATINGCOSTS])
-        self.graph.glob.updateLocalValues('stdOpC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,OPERATINGCOSTS])
+        self._graph.glob.updateLocalValues('meanEmm', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,EMISSIONS])
+        self._graph.glob.updateLocalValues('stdEmm', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,EMISSIONS])
+        self._graph.glob.updateLocalValues('meanFiC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,FIXEDCOSTS])
+        self._graph.glob.updateLocalValues('stdFiC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,FIXEDCOSTS])
+        self._graph.glob.updateLocalValues('meanOpC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,OPERATINGCOSTS])
+        self._graph.glob.updateLocalValues('stdOpC', self.getAttrOfAgentType('prop', agTypeID=PERS)[:,OPERATINGCOSTS])
      
         # local values are used to update the new global values
-        self.graph.glob.sync()
+        self._graph.glob.sync()
         
         #gather data back to the records
         globalStock = np.zeros(self.para['nMobTypes'])
@@ -232,12 +231,12 @@ class Earth(World):
             self.globalRecord['nChargStations_' + str(re)].gatherGlobalDataToRec(self.time)
             
 
-        tmp = [self.graph.glob.globalValue['meanEmm'], 
-               self.graph.glob.globalValue['stdEmm'], 
-               self.graph.glob.globalValue['meanFiC'], 
-               self.graph.glob.globalValue['stdFiC'],
-               self.graph.glob.globalValue['meanOpC'], 
-               self.graph.glob.globalValue['stdOpC']]
+        tmp = [self._graph.glob.globalValue['meanEmm'], 
+               self._graph.glob.globalValue['stdEmm'], 
+               self._graph.glob.globalValue['meanFiC'], 
+               self._graph.glob.globalValue['stdFiC'],
+               self._graph.glob.globalValue['meanOpC'], 
+               self._graph.glob.globalValue['stdOpC']]
 
         self.globalRecord['globEmmAndPrice'].set(self.time,np.asarray(tmp))
 
@@ -1333,7 +1332,7 @@ class Person(Agent, Parallel):
 
     @classmethod
     def _setSharedArrays(cls, maxFriends, nUtil):
-        """ Makes the class variable _graph available at the first init of an entity"""
+        """ Makes the class variable ._graph available at the first init of an entity"""
         cls.cacheCommUtil = np.zeros([maxFriends+1, nUtil])
         cls.cacheUtil     = np.zeros(maxFriends+1)
         cls.cacheMobType  = np.zeros(maxFriends+1, dtype=np.int32)
@@ -1774,7 +1773,7 @@ class Household(Agent, Parallel):
         
 #    def setAdultNodeList(self, world):
 #        adultIdList = [adult.nID for adult in self.adults]
-#        self.adultNodeList = world.graph.vs[adultIdList]
+#        self.adultNodeList = world._graph.vs[adultIdList]
 
     def evalUtility(self, world, actionTaken=False):
         """
@@ -2458,10 +2457,10 @@ class Cell(Location, Parallel):
             if mobType == GREEN:
                 # elecric car is used -> compute estimate of power consumption
                 # for the current model 0.6 kg / kWh
-                electricConsumption = emissionsPers[idx].sum() / 0.6
+                electricConsumption = emissionsPers[idx].sum() / 0.6 * earth.para['reductionFactor']
                 self.attr['electricConsumption'] =  electricConsumption
         
-        self.attr['emissions'] =  emissionsCell
+        self.attr['emissions'] =  emissionsCell * earth.para['reductionFactor']
         
     def step(self, parameters):
         """
@@ -2500,23 +2499,23 @@ class GhostCell(GhostLocation, Cell):
         self.hhList = list()
         self.peList = list()
 
-#    def updateHHList_old(self, graph):  # toDo agTypeID is not correct anymore
+#    def updateHHList_old(self,._graph):  # toDo agTypeID is not correct anymore
 #        """
 #        updated method for the household list, which is required since
 #        ghost cells are not active on their own
 #        """
-#        agTypeID = graph.class2NodeType[Household]
+#        agTypeID =._graph.class2NodeType[Household]
 #        hhIDList = self.getPeerIDs(agTypeID)
-#        self.hhList = graph.vs[hhIDList]
+#        self.hhList =._graph.vs[hhIDList]
 
-#    def updatePeList_old(self, graph):  # toDo agTypeID is not correct anymore
+#    def updatePeList_old(self,._graph):  # toDo agTypeID is not correct anymore
 #        """
 #        updated method for the people list, which is required since
 #        ghost cells are not active on their own
 #        """
-#        agTypeID = graph.class2NodeType[Person] 
+#        agTypeID =._graph.class2NodeType[Person] 
 #        hhIDList = self.getPeerIDs(agTypeID)
-#        self.hhList = graph.vs[hhIDList]
+#        self.hhList =._graph.vs[hhIDList]
 
 class Opinion():
     """

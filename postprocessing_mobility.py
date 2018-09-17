@@ -52,40 +52,39 @@ _hh  = 1
 _pe  = 2
 
 #%% INIT
-plotFunc.append('plot_globalRecords')
-plotFunc.append('plotEmissionOverTime')
-plotFunc.append('plotElectricDemandOverTime')
-plotFunc.append('plot_globalID')
+#plotFunc.append('plot_globalRecords')
+#plotFunc.append('plotEmissionOverTime')
+#plotFunc.append('plotElectricDemandOverTime')
+#plotFunc.append('plot_globalID')
 
 plotFunc.append('plot_emissions')
 plotFunc.append('plot_electricConsumption')
 plotFunc.append('plot_ChargingStations')
-plotFunc.append('plot_GreenConvenienceOverTime')
-plotFunc.append('plot_stockAllRegions')
+#plotFunc.append('plot_GreenConvenienceOverTime')
+#plotFunc.append('plot_stockAllRegions')
 
-plotFunc.append('plot_agePerMobType')
+#plotFunc.append('plot_agePerMobType')
 #plotFunc.append('plot_womanSharePerMobType')
-plotFunc.append('plot_expectUtil')
-plotFunc.append('plot_selfUtil')
+#plotFunc.append('plot_expectUtil')
+#plotFunc.append('plot_selfUtil')
 plotFunc.append('plot_carStockBarPlot')
 plotFunc.append('plot_carSales')
-plotFunc.append('plot_properiesPerMobType')
-plotFunc.append('plot_salesProperties')
-plotFunc.append('plot_prefPerLabel')
-plotFunc.append('plot_utilPerLabel')
-plotFunc.append('plot_greenPerIncome')
+#plotFunc.append('plot_properiesPerMobType')
+#plotFunc.append('plot_salesProperties')
+#plotFunc.append('plot_prefPerLabel')
+#plotFunc.append('plot_utilPerLabel')
+#plotFunc.append('plot_greenPerIncome')
 plotFunc.append('plot_averageIncomePerCell')
-plotFunc.append('plot_incomePerLabel')
-plotFunc.append('plot_meanPrefPerLabel')
-plotFunc.append('plot_meanConsequencePerLabel')
-plotFunc.append('plot_convOverTime')
-plotFunc.append('plot_cellMovie')
+#plotFunc.append('plot_incomePerLabel')
+#plotFunc.append('plot_meanPrefPerLabel')
+#plotFunc.append('plot_meanConsequencePerLabel')
+#plotFunc.append('plot_convOverTime')
+#plotFunc.append('plot_cellMovie')
 plotFunc.append('plot_carsPerCell')
-plotFunc.append('plot_greenCarsPerCell')
-plotFunc.append('plot_conveniencePerCell')
-plotFunc.append('plot_population')
-plotFunc.append('plot_doFolium')
-plotFunc.append('plot_carSharePerHHType')
+#plotFunc.append('plot_greenCarsPerCell')
+#plotFunc.append('plot_population')
+#plotFunc.append('plot_doFolium')
+#plotFunc.append('plot_carSharePerHHType')
 
 ##
 #%% OLD 
@@ -108,7 +107,7 @@ except:
 #path = 'poznan_out/sim0795/'
 
 simParas   = misc.loadObj(path + 'simulation_parameters')
-
+os.popen('cp ' + path + '/*.csv '  + path + '/csv/')
 
 WITHOUTBURNIN = False #False
 plotYears     = True         # only applicable in plots without burn-in
@@ -133,8 +132,12 @@ print('omniscient Agents: ' + str(simParas['omniscientAgents']))
 print('burn-in phase: ' + str(N_BURN_IN))
 print('of which omniscient burn-in: ' + str(simParas['omniscientBurnIn']))
 
-
-
+h5path = path + '/h5'
+if not os.path.exists(h5path):
+    os.makedirs(h5path)
+    
+h5File  = h5py.File(h5path + '/mapData' + '.hdf5', 'w')
+h5File.close()
 
 def cellDataAsMap(landLayer, posArray, cellData):
 
@@ -342,13 +345,13 @@ class CSVWriter():
         
 class H5Writer():
     
-    def __init__(self, fileName, groupName):
+    def __init__(self, fileName, groupName, opt='a'):
         
         self.path = path + '/h5'
         if not os.path.exists(self.path):
             os.makedirs(self.path)
             
-        self.h5File  = h5py.File(self.path + '/' + fileName + '.hdf5', 'a')
+        self.h5File  = h5py.File(self.path + '/' + fileName + '.hdf5', opt)
         try:
             self.h5File.create_group('/' + groupName)
         except:
@@ -363,7 +366,7 @@ class H5Writer():
 #            print 'data'
 #            print data
         self.data    = self.h5File.create_dataset(self.nodePath + '/step' + str(step), data.shape)
-        self.data = data
+        self.data[:] = data
         
         
     def close(self):
@@ -1295,13 +1298,45 @@ def plot_cellMovie(data,  parameters, enums, filters):
 
 def plot_carsPerCell(data,  parameters, enums, filters):
     #%%
-    h5writer = H5Writer('mapData', 'greenCars')
+    h5writer = H5Writer('mapData', 'Combustion_Cars')
     for step in range(IO_STEPS):
         
-        cellData = data.ce['carsInCell'][step, :, 1]
+        cellData = data.ce['carsInCell'][step, :, 0] * parameters['reductionFactor']
         mapData = cellData2Map(cellData, data)
         h5writer.addData(step,mapData)
     h5writer.close()    
+
+    h5writer = H5Writer('mapData', 'Electric_Cars')
+    for step in range(IO_STEPS):
+        
+        cellData = data.ce['carsInCell'][step, :, 1] * parameters['reductionFactor']
+        mapData = cellData2Map(cellData, data)
+        h5writer.addData(step,mapData)
+    h5writer.close()  
+
+    h5writer = H5Writer('mapData', 'Public_Transport_Users')
+    for step in range(IO_STEPS):
+        
+        cellData = data.ce['carsInCell'][step, :, 2] * parameters['reductionFactor']
+        mapData = cellData2Map(cellData, data)
+        h5writer.addData(step,mapData)
+    h5writer.close()  
+
+    h5writer = H5Writer('mapData', 'Car_Sharing_Users')
+    for step in range(IO_STEPS):
+        
+        cellData = data.ce['carsInCell'][step, :, 3] * parameters['reductionFactor']
+        mapData = cellData2Map(cellData, data)
+        h5writer.addData(step,mapData)
+    h5writer.close()  
+
+    h5writer = H5Writer('mapData', 'None_Motorized_Users')
+    for step in range(IO_STEPS):
+        
+        cellData = data.ce['carsInCell'][step, :, 4] * parameters['reductionFactor']
+        mapData = cellData2Map(cellData, data)
+        h5writer.addData(step,mapData)
+    h5writer.close()  
     
     import copy
     fig = plt.figure(figsize=(12,8))
@@ -1480,20 +1515,20 @@ def plot_greenCarsPerCell(data,  parameters, enums, filters):
         print(bounds)
     posArray = data.ceSta['coord'].astype(int)
     
-    h5writer = H5Writer('mapData', 'greenCarsPerCell')
-    
-    for step in range(IO_STEPS):
-        
-        cellData = data.ce['carsInCell'][step, iBrand]
-        if step < 10:
-            print('cellData')
-            print(cellData)   
-        mapData = cellData2Map(cellData, data)
-#        if step == 134:
-#            print 'mapData'
-#            print mapData        
-        h5writer.addData(step,mapData)
-    h5writer.close()
+#    h5writer = H5Writer('mapData', 'greenCarsPerCell')
+#    
+#    for step in range(IO_STEPS):
+#        
+#        cellData = data.ce['carsInCell'][step, iBrand]
+#        if step < 10:
+#            print('cellData')
+#            print(cellData)   
+#        mapData = cellData2Map(cellData, data)
+##        if step == 134:
+##            print 'mapData'
+##            print mapData        
+#        h5writer.addData(step,mapData)
+#    h5writer.close()
 
    
     for i, year in enumerate (years):
@@ -1609,11 +1644,12 @@ def plot_ChargingStations(data,  parameters, enums, filters):
     landLayer = np.zeros(np.max(data.ceSta['coord']+1,axis=0).astype(int).tolist())
 
     h5writer = H5Writer('mapData', 'chargStations')
-    for step in range(IO_STEPS):
+    for xStep in range(IO_STEPS):
         
-        cellData = data.ce['chargStat'][step]
+        cellData = data.ce['chargStat'][xStep]
         mapData = cellData2Map(cellData, data)
-        h5writer.addData(step,mapData)
+        #print(mapData)
+        h5writer.addData(xStep,mapData)
     h5writer.close()
     
     for iCell in range(data.ce.shape[1]):

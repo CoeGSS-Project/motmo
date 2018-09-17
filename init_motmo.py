@@ -361,7 +361,7 @@ def householdSetup(earth, calibration=False):
         agentEnd   = int(np.sum(nAgentsOnProcess[:core.mpiRank+1,i]))
 
         lg.info('Reading agents from ' + str(agentStart) + ' to ' + str(agentEnd) + ' for region ' + str(region))
-        lg.debug('Vertex count: ' + str(earth.graph.nCount()))
+        lg.debug('Vertex count: ' + str(earth._graph.nCount()))
         
         if earth.debug:
             pass
@@ -395,13 +395,13 @@ def householdSetup(earth, calibration=False):
 
     opinion     = Opinion(earth)
     nAgentsCell = 0
-    locDict = earth.getLocationDict()
+    locDict = earth.grid.getNodeDict()
     
     
     for x, y in list(locDict.keys()):
         
         nAgentsCell = int(parameters['population'][x, y]) + nAgentsCell # subtracting Agents that are places too much in the last cell
-        loc         = earth.grid.getLocation(x, y)
+        loc         = earth.grid.getNodeID(x, y)
         region      = parameters['regionIdRaster'][x, y]
         regionIdx   = np.where(regionIdxList == region)[0][0]
 
@@ -684,7 +684,7 @@ def initTypes(earth):
                                                    ('regionId', np.int16, 1),
                                                    ('popDensity', np.float64, 1),
                                                    ('cityPopSize', np.int32, 1),
-                                                   ('population', np.int16, 1)],
+                                                   ('population', np.int32, 1)],
                                dynamicProperties = [('convenience', np.float64, 5),
                                                    ('carsInCell', np.int32, 5),
                                                    ('chargStat', np.int32, 1),
@@ -819,7 +819,7 @@ def cellTest(earth):
     
             
             
-    nLocations = len(earth.getLocationDict())
+    nLocations = len(earth.grid.getNodeDict())
     convArray  = np.zeros([earth.market.getNMobTypes(), nLocations])
     popArray   = np.zeros(nLocations)
     eConvArray = earth.para['landLayer'] * 0
@@ -1189,7 +1189,7 @@ def onlinePostProcessing(earth):
     # calculate the mean and standart deviation of priorities
     df = pd.DataFrame([],columns=['prCon','prEco','prMon','prImi'])
     for agID in earth.nodeDict[3]:
-        df.loc[agID] = earth.graph.vs[agID]['preferences']
+        df.loc[agID] = earth._graph.vs[agID]['preferences']
 
 
     lg.info('Preferences -average')
@@ -1213,8 +1213,8 @@ def onlinePostProcessing(earth):
 
     # calculate the correlation between weights and differences in priorities
     if False:
-        pref = np.zeros([earth.graph.vcount(), 4])
-        pref[earth.nodeDict[PERS],:] = np.array(earth.graph.vs[earth.nodeDict[PERS]]['preferences'])
+        pref = np.zeros([earth._graph.vcount(), 4])
+        pref[earth.nodeDict[PERS],:] = np.array(earth._graph.vs[earth.nodeDict[PERS]]['preferences'])
         idx = list()
         for link in earth.iterLinks(CON_PP):
             link['prefDiff'] = np.sum(np.abs(pref[link.target, :] - pref[link.source,:]))
@@ -1222,13 +1222,13 @@ def onlinePostProcessing(earth):
 
 
         plt.figure()
-        plt.scatter(np.asarray(earth.graph.es['prefDiff'])[idx],np.asarray(earth.graph.es['weig'])[idx])
+        plt.scatter(np.asarray(earth._graph.es['prefDiff'])[idx],np.asarray(earth._graph.es['weig'])[idx])
         plt.xlabel('difference in preferences')
         plt.ylabel('connections weight')
 
         plt.show()
-        x = np.asarray(earth.graph.es['prefDiff'])[idx].astype(np.float)
-        y = np.asarray(earth.graph.es['weig'])[idx].astype(np.float)
+        x = np.asarray(earth._graph.es['prefDiff'])[idx].astype(np.float)
+        y = np.asarray(earth._graph.es['weig'])[idx].astype(np.float)
         lg.info( np.corrcoef(x,y))
 
 

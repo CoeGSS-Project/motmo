@@ -158,7 +158,7 @@ class Earth(World):
             ttx = time.time()
             frList, links, weights = agent.generateContactNetwork(self, nContacts)
             
-            sourceList += [agent.nID] * len(frList)
+            sourceList += [agent.ID] * len(frList)
             targetList += frList
             weigList += weights
             populationList.append(agent.loc.attr['population'])
@@ -1346,7 +1346,7 @@ class Person(Agent, Parallel):
 
         Agent.register(self, world, parentEntity, liTypeID)
         self.loc = parentEntity.loc
-        self.loc.peList.append(self.nID)
+        self.loc.peList.append(self.ID)
         self.hh = parentEntity
         self.hh.addAdult(self)
 
@@ -1414,7 +1414,7 @@ class Person(Agent, Parallel):
         cellConnWeights, cellIds = self.loc.getConnectedCells()
         #cell = self.getPeer(np.random.choice(cellIds))
         #personIds = cell.getPersons()
-        personIds = self._graph.outgoingIDs(self.nID, CON_LH)
+        personIds = self._graph.outgoingIDs(self.ID, CON_LH)
 
         if len(personIds) > nContacts:
             contactIds = np.random.choice(personIds, size= nContacts, replace=False)
@@ -1424,7 +1424,7 @@ class Person(Agent, Parallel):
         contactIds = [person for person in contactIds if person not in currentContacts]
 
         contactList = contactIds
-        connList    = [(self.nID, idx) for idx in contactIds]
+        connList    = [(self.ID, idx) for idx in contactIds]
 
         return contactList, connList
 
@@ -1442,9 +1442,9 @@ class Person(Agent, Parallel):
             isInit=False
 
         if currentContacts is None:
-            currentContacts = [self.nID]
+            currentContacts = [self.ID]
         else:
-            currentContacts.append(self.nID)
+            currentContacts.append(self.ID)
 
         contactList = list()
         connList   = list()
@@ -1468,7 +1468,7 @@ class Person(Agent, Parallel):
 
         # return nothing if too few candidates
         if not isInit and nPers > nContacts:
-            lg.info('ID: ' + str(self.nID) + ' failed to generate friend')
+            lg.info('ID: ' + str(self.ID) + ' failed to generate friend')
             return [],[],[]
 
         
@@ -1530,25 +1530,25 @@ class Person(Agent, Parallel):
         weightData[:,0] = weightData[:,0] / np.sum(weightData[:,0],axis=0)
 
         if np.sum(weightData[:,0]>0) < nContacts:
-            lg.info( "nID: " + str(self.nID) + ": Reducting the number of friends at " + str(self.loc.attr['coord']))
+            lg.info( "nID: " + str(self.ID) + ": Reducting the number of friends at " + str(self.loc.attr['coord']))
             lg.info( "population = " + str(self.loc.attr['population']) + " surrounding population: " +str(np.sum(self.loc.getAttrOfPeers('population',CON_LL)[0])))
 
             nContacts = min(np.sum(weightData[:,0]>0)-1,nContacts)
 
         if nContacts < 1:                                                       ##OPTPRODUCTION
-            lg.info('ID: ' + str(self.nID) + ' failed to generate friend')      ##OPTPRODUCTION
+            lg.info('ID: ' + str(self.ID) + ' failed to generate friend')      ##OPTPRODUCTION
 
         else:
             # adding contacts
             ids = np.random.choice(weightData.shape[0], nContacts, replace=False, p=weightData[:,0])
             contactList = [ personIdsAll[idx] for idx in ids ]
-            connList   = [(self.nID, personIdsAll[idx]) for idx in ids]
+            connList   = [(self.ID, personIdsAll[idx]) for idx in ids]
             assert len(ids) <= world.para['maxFriends']
             
         if isInit and world.getParameters()['addYourself'] and addYourself:
             #add yourself as a friend
-            contactList.append(self.nID)
-            connList.append((self.nID,self.nID))
+            contactList.append(self.ID)
+            connList.append((self.ID,self.ID))
 
         weigList   = [1./len(connList)]*len(connList)
         
@@ -1585,7 +1585,7 @@ class Person(Agent, Parallel):
 
 
         if len(selfUtil) != earth.para['nMobTypes'] or len(commUtil.shape) == 0 or commUtil.shape[0] != earth.para['nMobTypes']:       ##OPTPRODUCTION
-            print('nID: ' + str(self.nID))                                       ##OPTPRODUCTION
+            print('nID: ' + str(self.ID))                                       ##OPTPRODUCTION
             print('error: ')                                                     ##OPTPRODUCTION
             print('communityUtil: ' + str(commUtil))                             ##OPTPRODUCTION
             print('selfUtil: ' + str(self['selfUtil']))                 ##OPTPRODUCTION
@@ -1675,20 +1675,20 @@ class Person(Agent, Parallel):
 
 class GhostPerson(GhostAgent):
 
-    def __init__(self, world, mpiOwner, nID=None, **kwProperties):
-        GhostAgent.__init__(self, world, mpiOwner, nID, **kwProperties)
+    def __init__(self, world, mpiOwner, ID=None, **kwProperties):
+        GhostAgent.__init__(self, world, mpiOwner, ID, **kwProperties)
 
     def register(self, world, parentEntity=None, liTypeID=None):
 
         GhostAgent.register(self, world, parentEntity, liTypeID)
         self.loc = parentEntity.loc
-        self.loc.peList.append(self.nID)
+        self.loc.peList.append(self.ID)
         self.hh = parentEntity
 
 class GhostHousehold(GhostAgent):
 
-    def __init__(self, world, mpiOwner, nID=None, **kwProperties):
-        GhostAgent.__init__(self, world, mpiOwner, nID, **kwProperties)
+    def __init__(self, world, mpiOwner, ID=None, **kwProperties):
+        GhostAgent.__init__(self, world, mpiOwner, ID, **kwProperties)
 
     def register(self, world, parentEntity=None, liTypeID=None):
 
@@ -1696,7 +1696,7 @@ class GhostHousehold(GhostAgent):
 
         #self.queueConnection(locID,CON_LH)
         self.loc = parentEntity
-        self.loc.hhList.append(self.nID)
+        self.loc.hhList.append(self.ID)
 
 class Household(Agent, Parallel):
     
@@ -1765,14 +1765,14 @@ class Household(Agent, Parallel):
 
         #self.queueConnection(locID,CON_LH)
         self.loc = parentEntity
-        self.loc.hhList.append(self.nID)
+        self.loc.hhList.append(self.ID)
 
     def addAdult(self, personInstance):
         """adding reference to the person to household"""
         self.adults.append(personInstance)
         
 #    def setAdultNodeList(self, world):
-#        adultIdList = [adult.nID for adult in self.adults]
+#        adultIdList = [adult.ID for adult in self.adults]
 #        self.adultNodeList = world._graph.vs[adultIdList]
 
     def evalUtility(self, world, actionTaken=False):
@@ -2069,7 +2069,7 @@ class Household(Agent, Parallel):
                 util = self.evalUtility(earth)
 
                 if util < 1:                                                                                    ##OPTPRODUCTION
-                    lg.debug('####' + str(self.nID) + '#####')                                                  ##OPTPRODUCTION
+                    lg.debug('####' + str(self.ID) + '#####')                                                  ##OPTPRODUCTION
                     lg.debug('New Util: ' +str(util) + ' old util: '                                            ##OPTPRODUCTION
                              + str(oldUtil) + ' exp. Util: ' + str(utilities[bestUtilIdx]))                     ##OPTPRODUCTION
                     lg.debug('possible utilitties: ' + str(utilities))                                          ##OPTPRODUCTION                
@@ -2296,7 +2296,7 @@ class Reporter(Household):
 
     def __init__(self, world, agTypeID = 'ag', xPos = np.nan, yPos = np.nan):
         Household.__init__(self, world, agTypeID , xPos, yPos)
-        self.writer = core.Writer(world, str(self.nID) + '_diary')
+        self.writer = core.Writer(world, str(self.ID) + '_diary')
         raise('do not use - or update')
 
         #self.writer.write(

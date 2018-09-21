@@ -469,7 +469,7 @@ def householdSetup(earth, calibration=False):
 #            if earth.isParallel:
             hhID = hh.attr['gID']
 #            else:
-#                hhID = hh.nID
+#                hhID = hh.ID
             assert nAdults > 0 ##OPTPRODUCTION
             
             for iPers in range(nPers):
@@ -678,7 +678,7 @@ def initScenario(earth, parameters):
 def initTypes(earth):
     tt = time.time()
 
-    en.CELL = earth.registerAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
+    en.CELL = earth.addAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
                                staticProperties  = [('gID', np.int32, 1),
                                                    ('coord', np.int16, 2),
                                                    ('regionId', np.int16, 1),
@@ -691,8 +691,9 @@ def initTypes(earth):
                                                    ('emissions', np.float64, 5),
                                                    ('electricConsumption', np.float64, 1)])
 
-    en.HH = earth.registerAgentType(AgentClass=Household, 
+    en.HH = earth.addAgentType(AgentClass=Household, 
                                 GhostAgentClass=GhostHousehold,
+                                agTypeStr = 'Household',
                                 staticProperties  = [('gID', np.int32, 1),
                                                     ('coord', np.int16, 2),
                                                     ('hhSize', np.int8,1),
@@ -704,7 +705,8 @@ def initTypes(earth):
                                                     ('expenses', np.float32, 1)])
 
 
-    en.PERS = earth.registerAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
+    en.PERS = earth.addAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
+                                      agTypeStr = 'Person',
                                 staticProperties = [('gID', np.int32, 1),
                                                    ('hhID', np.int32, 1),
                                                    ('preferences', np.float64, 4),
@@ -1134,8 +1136,35 @@ def runModel(earth, parameters):
     initCacheArrays(earth)
     
     #plotIncomePerNetwork(earth)
-
-
+    
+    # computationallySummary
+    if core.mpiRank == 0:
+        print("########### Global statistics ########################")
+    
+    for agTypeID in earth.agentTypesIDs():
+        if earth.isParallel:
+            count = np.sum(earth.papi.all2all(earth.countAgents(agTypeID)))
+        else:
+            count = earth.countAgents(agTypeID)
+    
+        if core.mpiRank == 0:
+            print('agTypeID: ' + str(agTypeID), end="")
+            print(' agent of type: ' + earth._graph.agTypeByID[agTypeID].typeStr, end="")
+            print(' of count: ' + str( count))
+        
+    for liTypeID in earth.linkTypesIDs():
+        if earth.isParallel:
+            count = np.sum(earth.papi.all2all(earth.countLinks(liTypeID)))
+        else:
+            count = earth.earth.countLinks(liTypeID)
+    
+        if core.mpiRank == 0:
+            print('liTypeID: ' + str(liTypeID), end="")
+            print(' link of type: ' + earth._graph.liTypeByID[liTypeID].typeStr, end="")
+            print(' of count: ' + str( count))    
+    if core.mpiRank == 0:
+        print("########### END Global statistics ########################")    
+    
     #%% Simulation
     earth.time = -1 # hot bugfix to have both models running #TODO Fix later
     lg.info( "Starting the simulation:")
@@ -1231,4 +1260,4 @@ def onlinePostProcessing(earth):
         y = np.asarray(earth._graph.es['weig'])[idx].astype(np.float)
         lg.info( np.corrcoef(x,y))
 
-
+    

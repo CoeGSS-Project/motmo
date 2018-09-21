@@ -11,7 +11,7 @@ muBrownFinal,       0,,,,"# argument value for conventience maximum"
 ################# Infrastructure GREEN ############################",,,,,
 minGreenInit,       0.01,,,,"# minimal convenience of e-cars"
 minGreenFinal,      0.2,,,,"# minimal convenience of e-cars"
-maxGreenInit,       0.18,,,,"# initial maximal initial convenience of e-cars"
+maxGreenInit,       0.10,,,,"# initial maximal initial convenience of e-cars"
 maxGreenFinal,      0.8,,,,"# maximal convenience of e-cars"
 sigmaGreenInit,     500,,,,"# initial spread factor for convenience fo e-cars"
 sigmaGreenFinal,    2500,,,,"# spread factor for convenience fo combustion cars"

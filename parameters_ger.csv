@@ -8,7 +8,7 @@ omniscientBurnIn,0,,,,"# number of omiscient agent time steps"
 utilObsError,50,,,,"# observation error to compare utilities"
 mobNewPeriod,60,,,,"# period within a choice is new and not challenged"
 randomCarPropDeviationSTD,0.01,,,,"# individual random deviation of car properities"
-reductionFactor,400,,,,"# population reduction factor"
+reductionFactor,20,,,,"# population reduction factor"
 "################## Prioritiy generation #################",,,,,
 individualPrio,0.33,0,,,"# individual random component of priorities"
 charIncome,5000,1,2000,7000,"# [100 5000]"

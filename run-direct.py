@@ -69,8 +69,8 @@ parameters['stopAt2008'] = stopAt2008
 earth = init.initEarth(simNo,
                        outputPath,
                        parameters,
-                       maxNodes=10000000,
-                       maxLinks=500000000,
+                       maxNodes=1000000,
+                       maxLinks=5000000,
                        debug=debug,
                        mpiComm=comm)
 
@@ -90,3 +90,4 @@ if showFigures:
     init.onlinePostProcessing(earth)
 
     plots.computingTimes(earth)
+

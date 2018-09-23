@@ -2160,10 +2160,10 @@ class Household(Agent, Parallel):
             actorIds      = [actorIds[idx] for idx in ids]
 #        else:
 #            actorIds = None
-        combinedActionsOptions = core.cartesian(actionOptions)
+        combinedActionsOptions = misc.cartesian(actionOptions)
         
         #tt2 = time.time()
-        consMat = self.testConsequences(earth, core.cartesian(actionOptions)) #shape [nOptions x nPersons x nConsequences]
+        consMat = self.testConsequences(earth, misc.cartesian(actionOptions)) #shape [nOptions x nPersons x nConsequences]
         #print 'testConsequences : ' +str(time.time() -tt2)
         #tt2 = time.time()
         #consMat = self.testConsequences2(earth, core.cartesian(actionOptions)) #shape [nOptions x nPersons x nConsequences]

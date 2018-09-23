@@ -54,7 +54,7 @@ from scipy import signal
 
 sys.path.append('../abm4py')
 from classes_motmo import Person, GhostPerson, Household, GhostHousehold, Cell, GhostCell, Earth, Opinion
-from abm4py import core
+from abm4py import core, misc
 import scenarios
 
 print('import done')
@@ -270,7 +270,7 @@ def createAndReadParameters(fileName, dirPath):
     def readParameterFile(parameters, fileName):
         for item in csv.DictReader(open(fileName)):
             if item['name'][0] != '#':
-                parameters[item['name']] = core.convertStr(item['value'])
+                parameters[item['name']] = misc.convertStr(item['value'])
         return parameters
 
     parameters = core.AttrDict()
@@ -541,9 +541,6 @@ def householdSetup(earth, calibration=False):
             
     return earth
 
-
-
-
 def initEarth(simNo,
               outPath,
               parameters,
@@ -678,8 +675,8 @@ def initScenario(earth, parameters):
 def initTypes(earth):
     tt = time.time()
 
-    en.CELL = earth.addAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
-                               staticProperties  = [('gID', np.int32, 1),
+    en.CELL = earth.registerAgentType(AgentClass=Cell, GhostAgentClass= GhostCell,
+                               staticProperties  = [('gID', np.int64, 1),
                                                    ('coord', np.int16, 2),
                                                    ('regionId', np.int16, 1),
                                                    ('popDensity', np.float64, 1),
@@ -691,10 +688,10 @@ def initTypes(earth):
                                                    ('emissions', np.float64, 5),
                                                    ('electricConsumption', np.float64, 1)])
 
-    en.HH = earth.addAgentType(AgentClass=Household, 
+    en.HH = earth.registerAgentType(AgentClass=Household, 
                                 GhostAgentClass=GhostHousehold,
                                 agTypeStr = 'Household',
-                                staticProperties  = [('gID', np.int32, 1),
+                                staticProperties  = [('gID', np.int64, 1),
                                                     ('coord', np.int16, 2),
                                                     ('hhSize', np.int8,1),
                                                     ('nKids', np.int8, 1),
@@ -705,10 +702,10 @@ def initTypes(earth):
                                                     ('expenses', np.float32, 1)])
 
 
-    en.PERS = earth.addAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
+    en.PERS = earth.registerAgentType(AgentClass=Person, GhostAgentClass= GhostPerson,
                                       agTypeStr = 'Person',
-                                staticProperties = [('gID', np.int32, 1),
-                                                   ('hhID', np.int32, 1),
+                                staticProperties = [('gID', np.int64, 1),
+                                                   ('hhID', np.int64, 1),
                                                    ('preferences', np.float64, 4),
                                                    ('gender', np.int8, 1),
                                                    ('nJourneys', np.int16, 5),
@@ -1156,7 +1153,7 @@ def runModel(earth, parameters):
         if earth.isParallel:
             count = np.sum(earth.papi.all2all(earth.countLinks(liTypeID)))
         else:
-            count = earth.earth.countLinks(liTypeID)
+            count = earth.countLinks(liTypeID)
     
         if core.mpiRank == 0:
             print('liTypeID: ' + str(liTypeID), end="")

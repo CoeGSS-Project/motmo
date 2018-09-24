@@ -1172,9 +1172,11 @@ def runModel(earth, parameters):
         if ('stopAt2008' in parameters.keys()) and parameters['stopAt2008']:
             if earth.date[1] == 2008:
                 break
-        #plt.figure()
-        #plot.calGreenNeigbourhoodShareDist(earth)
-        #plt.show()
+        
+        if earth.date[1] == 2008 and earth.date[0] == 1:
+            import tools_motmo as tools
+            errorDict, totalError = tools.computeError(earth)
+            earth.calErrorDict2008 = errorDict
 
 
 
@@ -1207,6 +1209,10 @@ def writeSummary(earth, parameters):
     
         fid.writelines('Total relative error:' + str(errorTot))
         
+        fid.writelines('####### Calibration 2009 error####### \n')
+        fid.writelines(str(earth.calErrorDict2008))                    
+        fid.writelines('##################################### \n')
+                       
         fid.close()
     
         lg.info( 'The simulation error is: ' + str(errorTot) )

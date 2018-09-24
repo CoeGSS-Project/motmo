@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 #import classes_motmo as motmo
 from abm4py import core
 import random
-doPlot = True
+
 
 en = core.enum
 
@@ -171,8 +171,8 @@ def assess_km_share_hh_type(earth, doPlot=True):
         xx = [np.sum(mobKmOfCat[mobChoiceOfCat==mobOpt]) for mobOpt in mobTypeIDs]
         #store km share in the simulation data frame
         simulationDf[i,:] = xx / np.sum(xx)        
-        #store the absulte difference in the error data frame
-        errorDf[i,:] = np.abs(earth.calShareHHTye[i,[0,2,4]] - simulationDf[i,:])
+        #store the absolut difference in the error data frame
+        errorDf[i,:] = np.abs(earth.calShareHHTye[i,] - simulationDf[i,:])
     
     
         
@@ -192,14 +192,14 @@ def assess_km_share_hh_type(earth, doPlot=True):
             i+=1
             plt.subplot(3,1,i)
             #plt.bar([x-.25 for x in catDict.keys()],earth.calShareHHTye[:,mobID],width=.5, color='g')
-            plt.bar([x-.25 for x in catDict.keys()], earth.calShareHHTye[:,mobID],width=.5, color='g')
+            plt.bar([x-.25 for x in catDict.keys()], earth.calShareHHTye[:,ii],width=.5, color='g')
             plt.bar(catDict.keys(),simulationDf[:,ii],width=.5, color='b')
             
-            plt.bar(catDict.keys(), simulationDf[:,ii]- earth.calShareHHTye[:,mobID], width=weightOfCat, bottom= earth.calShareHHTye[:,mobID], color='r')
+            plt.bar(catDict.keys(), simulationDf[:,ii]- earth.calShareHHTye[:,ii], width=weightOfCat, bottom= earth.calShareHHTye[:,ii], color='r')
             plt.ylabel(mobDict[mobID])
             plt.xticks([])
             plt.ylim([0,1])
-        plt.xticks(list(catDict.keys()), list(catDict.values()),  rotation=30)
+        plt.xticks(list(range(0,len(earth.getEnums()['hhTypes'])-1)), list(catDict.values()),  rotation=30)
         plt.legend(['calibraton data', 'simulation data', 'error'])
         
     return errorDf, earth.calShareHHTye, simulationDf, weightOfCat
@@ -327,7 +327,7 @@ def assess_km_share_county(earth, doPlot=True):
             (15, lambda a : a['regionId']==1519)])	#Thueringen
 
     for cat in list(regionMapping.keys()):
-        if earth.countAgents(regionMapping[cat],en.CELL) == 0:
+        if earth.countFilteredAgents(regionMapping[cat],en.CELL) == 0:
             del regionMapping[cat]
     
     errorDf = pd.DataFrame([], columns=[enums['mobilityTypes'][x] for x in mobTypeIDs])
@@ -553,32 +553,36 @@ def scatterPrefVSProp(earth):
             ax.autoscale(tight=True)            
     plt.tight_layout()
 
-def computeError(earth):
-    errorList = []
+def computeError(earth, doPlot = False):
+    errorDict= {}
     err, _, _, weig = assess_km_share_age(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
-    errorList.append(weightedError)
+    errorDict['age class'] = weightedError
     print('Error in age classification       ' + str(weightedError))
     err, _, _, weig = assess_km_share_hh_type(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
-    errorList.append(weightedError)
+    errorDict['hh class'] = weightedError
+    
     print('Error in househole classification ' + str(weightedError))
     err, _, _, weig = assess_km_share_income(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
-    errorList.append(weightedError)
+    errorDict['income class'] = weightedError
+    
     print('Error in income classification    ' + str(weightedError))   
     err, _, _, weig = assess_km_share_county(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
-    errorList.append(weightedError)
+    errorDict['county class'] = weightedError
+    
     print('Error in county classification    ' + str(weightedError))   
     err, _, _, weig = assess_km_share_density(earth, doPlot)
     weightedError = (err.sum(axis=1)*weig).mean()
-    errorList.append(weightedError)
+    errorDict['city class'] = weightedError
+    
     print('Error in city classification    ' + str(weightedError)) 
-    totalError = np.sum(errorList)
+    totalError = np.sum(list(errorDict.values()))
     print('===========================================')
     print('Total error                       ' + str(totalError))   
-    return errorList, totalError
+    return errorDict, totalError
 
    
 def workflow(earth):    
@@ -599,6 +603,8 @@ def workflow(earth):
         earth.fakeStep()
 
     computeError(earth)
+
+    
 #%%
 class Opinion():
     """

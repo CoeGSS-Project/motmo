@@ -1961,7 +1961,7 @@ class Household(Agent, Parallel):
 
 
             if (actionIdx > 2) and carInHh:
-                hhCarBonus = 0.2
+                hhCarBonus = 0.1
 
             convenience = hhLocation.attr['convenience'][actionIdx] + hhCarBonus
 
@@ -2519,7 +2519,7 @@ class GhostCell(GhostLocation, Cell):
 
 class Opinion():
     """
-    Creates preferences for households, given their properties
+    Creates preferences for persons, given their properties
     ToDO:
         - Update the method + more sophisticate method maybe using the DLR Data
     """
@@ -2560,19 +2560,25 @@ class Opinion():
         ce = float(ce)**2
 
         # priority of convinience
-        cc = 10
+        cc = 5
         cc += nKids/2
-        cc += income/self.convIncomeFraction/2
+        #cc += income/self.convIncomeFraction/2
         if sex == 1:
             cc +=1
         cc += 2* float(age)/self.charAge
         
-#        if ageYoungestKid > -1:
-#            cc += (18 - ageYoungestKid) / 5
+        if ageYoungestKid > -1:
+            cc += (18 - ageYoungestKid) / 2
 #        
 #        if age > 60: 
-        #cc += np.sum([x*y for x,y in zip(nJourneys, gl.MEAN_KM_PER_TRIP)]) / 2000.
+        cc += np.sum([x*y for x,y in zip(nJourneys, gl.MEAN_KM_PER_TRIP)]) / 3000.
+
+        if float(age) <65:
+            cc += 1.5 * float(age)/self.charAge
         
+        if float(age) >=65:
+            cc -= .5 * random.random() * (float(age))
+            
         cc += float(age)/self.charAge
         cc = float(cc)**2
 

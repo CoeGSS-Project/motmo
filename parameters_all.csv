@@ -1,5 +1,5 @@
 name,value,doSweep,minRange,maxRange,comment
-linearCharging,0,0,,,"# if set to 1 charging develops lineaer after 2020"
+nChargStations2035,1000000,0,,,# number of charging stations 2035
 hhAcceptFactor,1,0,,,
 greenDigital,1.,,,
 brownDigital,0.,,,

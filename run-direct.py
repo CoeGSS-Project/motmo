@@ -28,8 +28,6 @@ import time
 import sys
 import os
 import socket
-import numpy as np
-#np.random.seed(seed=1)
 
 import init_motmo as init
 from abm4py import core
@@ -40,6 +38,8 @@ debug = True
 showFigures = 0
 
 stopAt2008 = 0
+#import matplotlib as mpl
+#mpl.use('Agg')
 
 comm    = core.comm
 mpiRank = core.mpiRank

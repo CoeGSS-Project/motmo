@@ -146,6 +146,11 @@ def scenarioTestSmall(parameterInput, dirPath):
     # redefinition of setup parameters used for automatic calibration
     setup.update(parameterInput.toDict())
 
+    nChargStations2035 = setup['nChargStations2035']
+    import pickle
+    charStationData = pickle.load(open('resources/chargingStationPara.pkl', 'rb') )
+    setup['sigPara'] = charStationData[nChargStations2035]
+    
     for paName in ['techExpBrown', 'techExpGreen', 'techExpPublic', 'techExpShared', 'techExpNone',
                    'population']:
         setup[paName] /= setup['reductionFactor']
@@ -240,6 +245,11 @@ def scenarioTestMedium(parameterInput, dirPath):
     # redefinition of setup parameters used for automatic calibration
     setup.update(parameterInput.toDict())
 
+    nChargStations2035 = setup['nChargStations2035']
+    import pickle
+    charStationData = pickle.load(open('resources/chargingStationPara.pkl', 'rb') )
+    setup['sigPara'] = charStationData[nChargStations2035]
+    
     # calculate dependent parameters
     for paName in ['techExpBrown', 'techExpGreen', 'techExpPublic', 'techExpShared', 'techExpNone',
                    'population']:
@@ -339,7 +349,11 @@ def scenarioNBH(parameterInput, dirPath):
     # redefinition of setup parameters from file
     setup.update(parameterInput.toDict())
 
-
+    nChargStations2035 = setup['nChargStations2035']
+    import pickle
+    charStationData = pickle.load(open('resources/chargingStationPara.pkl', 'rb') )
+    setup['sigPara'] = charStationData[nChargStations2035]
+    
     for paName in ['techExpBrown',
                    'techExpGreen',
                    'techExpPublic',
@@ -468,6 +482,13 @@ def scenarioGer(parameterInput, dirPath):
 
     nAgents = np.nansum(setup.population)
     lg.info('Running with ' + str(nAgents) + ' agents')
+
+
+    
+    nChargStations2035 = setup['nChargStations2035']
+    import pickle
+    charStationData = pickle.load(open('resources/chargingStationPara.pkl', 'rb') )
+    setup['sigPara'] = charStationData[nChargStations2035]
 
     return setup
 

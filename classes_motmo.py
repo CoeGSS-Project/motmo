@@ -1180,8 +1180,8 @@ class Infrastructure():
         
         self.carsPerStation = 10. # number taken from assumptions of the German government
         self.mapLoaded = True
-        self.sigPara = 2.56141377e+02, 3.39506037e-2 # calibarted parameters
-
+        self.sigPara =  earth.para['sigPara']# 2.56141377e+02, 3.39506037e-2 # calibarted parameters
+    
     # scurve for fitting 
     @staticmethod
     def sigmoid(x, x0, k):
@@ -1262,8 +1262,8 @@ class Infrastructure():
         nNewStations = self.sigmoid(np.asarray([timeStep-1, timeStep]), *self.sigPara) 
         nNewStations = np.diff(nNewStations) * self.shareStationsOfProcess / earth.para['spatialRedFactor']
             
-        if earth.date[1] > 2020 and earth.para['linearCharging'] == 1:
-            nNewStations = 2000. * self.shareStationsOfProcess / earth.para['spatialRedFactor']
+#        if earth.date[1] > 2020 and earth.para['linearCharging'] == 1:
+#            nNewStations = 2000. * self.shareStationsOfProcess / earth.para['spatialRedFactor']
         
         deviationFactor = (100. + (np.random.randn() *3)) / 100.
         nNewStations = int(nNewStations * deviationFactor)
@@ -2538,6 +2538,7 @@ class Opinion():
                 ageYoungestKid,
                 nJourneys,
                 cityPopSize,
+                livingState,
                 radicality):
 
 
@@ -2560,7 +2561,7 @@ class Opinion():
         ce = float(ce)**2
 
         # priority of convinience
-        cc = 5
+        cc = 3
         cc += nKids/2
         #cc += income/self.convIncomeFraction/2
         if sex == 1:
@@ -2568,8 +2569,8 @@ class Opinion():
         cc += 2* float(age)/self.charAge
         
         if ageYoungestKid > -1:
-            cc += (18 - ageYoungestKid) / 2
-#        
+            cc += (18 - ageYoungestKid) / 5
+        
 #        if age > 60: 
         cc += np.sum([x*y for x,y in zip(nJourneys, gl.MEAN_KM_PER_TRIP)]) / 3000.
 
@@ -2577,9 +2578,20 @@ class Opinion():
             cc += 1.5 * float(age)/self.charAge
         
         if float(age) >=65:
-            cc -= .5 * random.random() * (float(age))
+            cc -= .3 * random.random() * (float(age))
             
         cc += float(age)/self.charAge
+        
+        if livingState == 3:
+            cc-= random.random()*5
+        elif livingState == 4:
+            if random.random() > 0.5:
+                cc-= random.random()*4
+#        elif lebensph == 1:
+#            cc-= random.random()*2
+        elif livingState == 5:
+            cc+= random.random()*2
+            
         cc = float(cc)**2
 
         # priority of money

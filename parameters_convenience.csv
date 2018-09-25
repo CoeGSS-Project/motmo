@@ -39,8 +39,8 @@ muSharedFinal,      4000,,,,"# argument value for convenience maximum of  of car
 ################# Infrastructure None ############################",,,,,
 minNoneInit,        0.005,,,,"# minimal convenience of non-motorized transport"
 minNoneFinal,       0.02,,,,"# minimal convenience of non-motorized transport"
-maxNoneInit,        0.20,,,,"# maximal convenience of non-motorized transport"
-maxNoneFinal,       0.23,,,,"# maximal convenience of non-motorized transport"
+maxNoneInit,        0.10,,,,"# maximal convenience of non-motorized transport"
+maxNoneFinal,       0.18,,,,"# maximal convenience of non-motorized transport"
 sigmaNoneInit,      300,,,,"# initial spread factor for convenience of non-motorized transport"
 sigmaNoneFinal,     1000,,,,"# initial spread factor for convenience of non-motorized transport"
 muNoneInit,         3800,,,,"# argument value for convenience maximum of non-motorized transport"

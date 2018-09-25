@@ -26,6 +26,11 @@ for year in range(2005,2019):
 xData.append(2020)
 yData.append(70000) 
 
+elStationsPara = dict()
+
+
+
+#xx = pickle.load(open('chargingStationData.pkl', 'rb') )
 plt.figure('fit', figsize=(6,3))
 plt.clf()
 pylab.plot(xData, yData, 'o', label='Daten')
@@ -41,4 +46,9 @@ for maxStations in [2e5, 5e5, 1e6]:
     xProjection = np.linspace(2005, 2035, 31)
     yProjection = sigmoid(xProjection, *popt)
     pylab.plot(xProjection, yProjection, '--', label='max Stations = ' + str(int(maxStations)))
-    
+    elStationsPara[maxStations] = popt
+
+import pickle
+fid = open('../resources/chargingStationPara.pkl', 'wb') 
+pickle.dump(elStationsPara, fid)
+fid.close()    

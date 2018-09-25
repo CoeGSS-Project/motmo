@@ -310,9 +310,20 @@ def householdSetup(earth, calibration=False):
     H5INCOME = 3
     H5HHTYPE = 4
     H5MOBDEM = [5, 6, 7, 8, 9]
+
+
+
     
         
     parameters = earth.getParameters()
+    
+    fileName2 =  parameters['resourcePath'] + 'lebensph_hhtyp_income_split_coded.csv'
+    dfShareLebensph = pd.read_csv( fileName2, index_col=[0,1], header=0)
+    earth.calShareLebensph = dfShareLebensph
+                
+    incomeBin = [0,900,3000,5000,7000,float("inf")]
+    incomeLabels = [1,2,3,4,5,6]   
+    
     tt = time.time()
     parameters['population'] = np.ceil(parameters['population'])
     nAgents = 0
@@ -479,6 +490,20 @@ def householdSetup(earth, calibration=False):
 
                 if ages[iPers] < 18:
                     continue    #skip kids
+                    
+                    
+                incomeCat = int(np.digitize(income, incomeBin))
+                ihTup = tuple([incomeCat, int(hhType)])
+#                bb=0
+#                while ihTup != earth.calShareLebensph.index[bb]:
+#                    bb +=1
+#                    
+#                else:
+                 
+                xy = earth.calShareLebensph.loc[ihTup].values
+                xy2 = np.cumsum(xy)
+                livingState = 1+ sum(np.where( np.random.random() > xy2, 1,0))                    
+                    
                 prefTuple = opinion.getPref(ages[iPers], 
                                             genders[iPers], 
                                             nKids, 
@@ -487,6 +512,7 @@ def householdSetup(earth, calibration=False):
                                             ageYoungestKid,
                                             nJourneysPerPerson[iPers],
                                             loc.attr['cityPopSize'],
+                                            livingState,
                                             parameters['radicality'])
 
                 
@@ -506,7 +532,8 @@ def householdSetup(earth, calibration=False):
                               lastAction  = 0,
                               hhType      = hhType,
                               emissions   = 0.,
-                              ageYoungestKid = ageYoungestKid)
+                              ageYoungestKid = ageYoungestKid,
+                              livingState  = livingState)
                 # remove after calibration
                 
                 pers.imitation = np.random.randint(parameters['nMobTypes'])
@@ -709,7 +736,8 @@ def initTypes(earth):
                                                    ('preferences', np.float64, 4),
                                                    ('gender', np.int8, 1),
                                                    ('nJourneys', np.int16, 5),
-                                                   ('hhType', np.int8, 1)],
+                                                   ('hhType', np.int8, 1),
+                                                   ('livingState', np.int8,1)],
                                dynamicProperties = [('age', np.int8, 1),
                                                    ('util', np.float32, 1),     # current utility
                                                    ('commUtil', np.float32, 5), # comunity utility
@@ -788,7 +816,7 @@ def initSpatialLayer(earth):
         earth.papi.updateGhostAgents([CELL],['chargStat'])
 
     if mpiRank == 0:
-        print('Setup of the spatial layer done in'  + "{:2.4f}".format((time.time()-tt)) + ' s')
+        print('Setup of the spatial layer done in '  + "{:2.4f}".format((time.time()-tt)) + ' s')
         
         
 def initInfrastructure(earth):
@@ -1171,6 +1199,8 @@ def runModel(earth, parameters):
         
         if ('stopAt2008' in parameters.keys()) and parameters['stopAt2008']:
             if earth.date[1] == 2008:
+                import tools_motmo as tools
+                tools.preserveConfig(earth, earth.simNo)
                 break
         
         if earth.date[1] == 2008 and earth.date[0] == 1:

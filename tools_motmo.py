@@ -199,7 +199,7 @@ def assess_km_share_hh_type(earth, doPlot=True):
             plt.ylabel(mobDict[mobID])
             plt.xticks([])
             plt.ylim([0,1])
-        plt.xticks(list(range(0,len(earth.getEnums()['hhTypes'])-1)), list(catDict.values()),  rotation=30)
+        plt.xticks(list(range(1,len(earth.getEnums()['hhTypes'])+1)), list(catDict.values()),  rotation=30)
         plt.legend(['calibraton data', 'simulation data', 'error'])
         
     return errorDf, earth.calShareHHTye, simulationDf, weightOfCat
@@ -584,7 +584,31 @@ def computeError(earth, doPlot = False):
     print('Total error                       ' + str(totalError))   
     return errorDict, totalError
 
-   
+preservePath = "/mnt/nas_coegss/calibration/"
+
+def preserveConfig(earth, no):
+    path = preservePath + '#' + str(no) + "/"
+    earth.saveParameters(path)
+    from shutil import copyfile
+    
+    for file in ["init_motmo.py", "classes_motmo.py", "scenarios.py", "run-direct.py",
+                 "parameters_NBH.csv", "parameters_all.csv", "parameters_convenience.csv",]:
+        copyfile(file, path + file)
+    errorDict, totalError = computeError(earth, doPlot = False)
+    fid = open(path + 'error', 'w')
+    for key in errorDict.keys():
+        fid.write('Error ' + key + ': ' + str(errorDict[key]) + '\n')
+    fid.write('===========================================' + '\n')
+    fid.write('Total error            ' + str(totalError)+ '\n') 
+    fid.close()
+    
+    for errFunc in [assess_km_share_age, assess_km_share_hh_type, assess_km_share_income,
+                    assess_km_share_county, assess_km_share_density]:
+        errFunc(earth, doPlot=1)
+        label = plt.gcf().get_label()
+        plt.savefig(path + label)
+        plt.close()
+        
 def workflow(earth):    
     
     assess_km_share_age(earth)

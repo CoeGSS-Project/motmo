@@ -1207,7 +1207,8 @@ def runModel(earth, parameters):
             import tools_motmo as tools
             errorDict, totalError = tools.computeError(earth)
             earth.calErrorDict2008 = errorDict
-
+            import tools_motmo as tools
+            tools.preserveConfig(earth, earth.simNo)
 
 
 

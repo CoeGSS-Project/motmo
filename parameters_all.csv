@@ -22,7 +22,7 @@ emLimitB,0.058279616211,,,,"# emission limit (brown) gCO2 per kg car per km"
 weightB,1541,,,,"# average weight of brown cars"
 "################# GREEN          ############################",,,,,
 initEmGreen,183.5,,,,"# initial emissions of green cars"
-initPriceGreen,1600,1,1280,1920,"# initial price of green engine car"
+initPriceGreen,1900,1,1280,1920,"# initial price of green engine car"
 initOperatingCostsGreen,0.06,1,0.048,0.072,"#operating costs for green cars"
 priceReductionG,-0.20919615,,,,"# price reduction through experience (green)"
 priceRedGCorrection,0.9,,,,"# correction due to weight and comfort"

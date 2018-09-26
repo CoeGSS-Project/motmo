@@ -503,14 +503,12 @@ class Earth(World):
         # I/O
         ttIO = time.time()
         ioStep = self.getParameters()["ioSteps"]
-        if self.getParameters()['writeAgentFile']:
-            if ioStep !=0 and (self.timeStep%ioStep == 0 or self.timeStep == self.getParameters()['nSteps']):
-                
+        
+        if ioStep !=0 and (self.timeStep%ioStep == 0 or self.timeStep == self.getParameters()['nSteps']-1):
+            if self.getParameters()['writeAgentFile']:        
                 self.io.writeAgentDataToFile(self.time, [CELL, HH, PERS])
         
-        if self.getParameters()['writeLinkFile']:
-            if ioStep !=0 and (self.timeStep%ioStep == 0 or self.timeStep == self.getParameters()['nSteps']):
-                
+            if self.getParameters()['writeLinkFile']:
                 self.io.writeLinkDataToFile(self.time, [CON_PP])
                 
         self.ioTime[self.time] = time.time()-ttIO
@@ -1216,7 +1214,7 @@ class Infrastructure():
                 
                 
             nextYearfactor = (earth.date[0]-1)/12
-            currStations = nextYearfactor * self.nextStatMap + (1-nextYearfactor) * self.currStatMap
+            currStations = (nextYearfactor * self.nextStatMap) + (1-nextYearfactor) * self.currStatMap
             currStations[np.isnan(currStations)] = 0
 #            if min(currStations)< 0 or max(currStations )> 1e6:
 #                import pdb
@@ -2582,15 +2580,15 @@ class Opinion():
             
         cc += float(age)/self.charAge
         
-        if livingState == 3:
-            cc-= random.random()*5
-        elif livingState == 4:
-            if random.random() > 0.5:
-                cc-= random.random()*4
-#        elif lebensph == 1:
-#            cc-= random.random()*2
-        elif livingState == 5:
-            cc+= random.random()*2
+#        if livingState == 3:
+#            cc-= random.random()*5
+#        elif livingState == 4:
+#            if random.random() > 0.5:
+#                cc-= random.random()*4
+##        elif lebensph == 1:
+##            cc-= random.random()*2
+#        elif livingState == 5:
+#            cc+= random.random()*2
             
         cc = float(cc)**2
 

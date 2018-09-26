@@ -1,8 +1,8 @@
 name,value,doSweep,minRange,maxRange,comment
 scenario,0,,,,"# selection of the scenario setup"
-nSteps,460,,,,"# number of simulation steps"
-burnIn,100,,,,"# number of burn in time steps"
-ioSteps,1,,,,"#number of steps after when the IO writen to file"
+nSteps,456,,,,"# number of simulation steps"
+burnIn,96,,,,"# number of burn in time steps"
+ioSteps,12,,,,"#number of steps after when the IO writen to file"
 burnInTimeFactor,1,,,,"# time scaling in burnIn"
 omniscientBurnIn,0,,,,"# number of omiscient agent time steps"
 connRadius,2.5,,,,"# radius within which location cell get connected"
